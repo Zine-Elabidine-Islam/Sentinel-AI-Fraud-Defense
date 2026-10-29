@@ -54,23 +54,21 @@ Incoming Checkout Payload (DZD, Coordinates, Merchant Category, Card Status)
 ## Mathematical & Kinematic Formulations
 
 ### 1. Great-Circle Geodesic Distance
-To prevent attackers using foreign exit nodes (VPNs/proxies) from evading local velocity caps, travel distance is computed using the spherical Earth radius ($R \approx 6371\text{ km}$) and the Haversine formula:
+To prevent attackers using foreign exit nodes (VPNs/proxies) from evading local velocity caps, travel distance is computed using the spherical Earth radius ($R \approx 6,371\text{ km}$) and the Haversine formula:
 
 $$\Delta\sigma = 2 \arcsin \sqrt{\sin^2\left(\frac{\Delta\phi}{2}\right) + \cos(\phi_1)\cos(\phi_2)\sin^2\left(\frac{\Delta\lambda}{2}\right)}$$
 
 $$d = R \cdot \Delta\sigma$$
 
 ### 2. Physical Velocity Formulation
-Velocity evaluates whether consecutive transactions exceed physical human travel speeds (velocity threshold $v > 900\text{ km/h}$):
+Velocity evaluates whether consecutive transactions exceed physical human travel speeds ($v > 900\text{ km/h}$ flag):
 
 $$v = \frac{d}{\Delta t}$$
 
 ### 3. Neural Classification
 Vectors pass through a standard scalar transform $z = \frac{x - \mu}{\sigma}$ across trained feature dimensions (Amount, Velocity, Attempt Count, Decline Flag, Lat/Lon, One-Hot Categories) and are classified by a dense neural network:
 
-$$P(\text{Fraud}) = \sigma\left(W_3 \cdot \operatorname{ReLU}(W_2 \cdot \operatorname{ReLU}(W_1 x + b_1) + b_2) + b_3\right)$$
-
-The model is evaluated across a 3-way dataset split tracking training loss ($J_{\text{train}}$), cross-validation loss ($J_{\text{cv}}$), and test loss ($J_{\text{test}}$).
+$$P(\text{Fraud}) = \sigma\left(\mathbf{W}_3 \cdot \text{ReLU}(\mathbf{W}_2 \cdot \text{ReLU}(\mathbf{W}_1 \mathbf{x} + \mathbf{b}_1) + \mathbf{b}_2) + b_3\right)$$
 
 ---
 
@@ -117,7 +115,7 @@ The model is evaluated across a 3-way dataset split tracking training loss ($J_{
 Clone the repository and install the dependencies:
 
 ```bash
-git clone [https://github.com/Zine-Elabidine-Islam/Sentinel-AI-Fraud-Defense.git](https://github.com/Zine-Elabidine-Islam/Sentinel-AI-Fraud-Defense.git)
+git clone https://github.com/Zine-Elabidine-Islam/Sentinel-AI-Fraud-Defense.git
 cd Sentinel-AI-Fraud-Defense
 pip install -r requirements.txt
 ```
@@ -145,7 +143,7 @@ Start the local ASGI web server:
 python -m uvicorn server:app --reload --port 8000
 ```
 
-Open your browser at `http://localhost:8000`.
+Open your browser at **`http://localhost:8000`**.
 
 ---
 
@@ -169,7 +167,7 @@ SentinelAI features a dedicated hidden control deck designed for live demonstrat
 
 Using the Presenter Panel (**`P`**), you can demonstrate three specific threat scenarios live to an audience:
 
-1. **🚨 Impossible Travel Attack:** Dispatches a high-ticket transaction from a foreign anonymizing exit node (London, Paris, Frankfurt), plotting a cross-Mediterranean velocity arc (velocity > 8,000 km/h) and auto-freezing the profile.
+1. **🚨 Impossible Travel Attack:** Dispatches a high-ticket transaction from a foreign anonymizing exit node (London, Paris, Frankfurt), plotting a cross-Mediterranean velocity arc ($v > 8,000\text{ km/h}$) and auto-freezing the profile.
 2. **💳 Sequential Card Decline:** Dispatches a 3-step rapid card-testing sequence inside an Algerian Wilaya, displaying intermediate `Declined (1/3)` warnings before auto-suspending the account on the 3rd attempt.
 3. **🛑 Banned Account Retry:** Demonstrates gateway-level policy enforcement when an already-blacklisted user attempts to place a new order.
 
