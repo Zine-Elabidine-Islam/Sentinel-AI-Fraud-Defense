@@ -176,5 +176,3 @@ Using the Presenter Panel (**`P`**), you can demonstrate three specific threat s
 ## License & Acknowledgments
 
 Developed by **Lakhlef Zine Elabidine** for the **Thirduni AI Training Program** supported by the **U.S. Embassy in Algiers**.
-
-Distributed under the MIT License.
