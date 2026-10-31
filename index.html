@@ -1,0 +1,2913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SENTINELAI — E-Commerce Fraud Defense, Algeria</title>
+
+  <!-- Load Local Static Assets or Cloud Assets Seamlessly -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" onerror="this.href='/static/css/leaflet.css'" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" onerror="this.src='/static/js/leaflet.js'"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" onerror="this.src='/static/js/chart.umd.min.js'"></script>
+
+  <style>
+    @font-face {
+      font-family: 'Inter';
+      src: local('Inter Regular'), local('Inter'), url('/static/fonts/Inter-Regular.woff2') format('woff2');
+      font-weight: 400;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Inter';
+      src: local('Inter SemiBold'), local('Inter-SemiBold'), url('/static/fonts/Inter-SemiBold.woff2') format('woff2');
+      font-weight: 600;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Inter';
+      src: local('Inter Bold'), local('Inter-Bold'), url('/static/fonts/Inter-Bold.woff2') format('woff2');
+      font-weight: 700 900;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'JetBrains Mono';
+      src: local('JetBrains Mono'), url('/static/fonts/JetBrainsMono-Regular.woff2') format('woff2');
+      font-weight: 400 800;
+      font-display: swap;
+    }
+
+    :root {
+      --bg-deep: #060b16;
+      --bg-panel: #0b1324;
+      --bg-card: #0e182d;
+      --bg-card-hover: #142240;
+      --border-subtle: #1c2d4f;
+      --border-glow: #38bdf8;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --emerald: #10b981;
+      --cyan: #38bdf8;
+      --amber: #f59e0b;
+      --rose: #f43f5e;
+      --purple: #a855f7;
+      --font-scale: 1;
+    }
+
+    body.projector-mode {
+      --bg-deep: #020408;
+      --bg-panel: #050b16;
+      --bg-card: #091326;
+      --border-subtle: #334e82;
+      --text-main: #ffffff;
+      --text-muted: #e2e8f0;
+      --text-dim: #cbd5e1;
+      --font-scale: 1.15;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Native 100% Zoom Proportions */
+    body {
+      background-color: var(--bg-deep);
+      color: var(--text-main);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: calc(12px * var(--font-scale));
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #vignette-flash {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9400;
+      box-shadow: inset 0 0 90px rgba(244, 63, 94, 0.85);
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+    #vignette-flash.active { opacity: 1; }
+
+    #toast-box {
+      position: fixed;
+      top: 52px;
+      right: 16px;
+      z-index: 9800;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      pointer-events: none;
+    }
+    .toast-msg {
+      padding: 8px 14px;
+      border-radius: 7px;
+      font-weight: 700;
+      font-size: 11.5px;
+      color: #fff;
+      background: rgba(244, 63, 94, 0.95);
+      border: 1px solid #fda4af;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+    }
+
+    /* ================= 1. TOP HEADER BAR ================= */
+    header {
+      min-height: 44px;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 12px;
+      flex-shrink: 0;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 900;
+      font-size: calc(13.5px * var(--font-scale));
+      letter-spacing: 0.6px;
+      cursor: pointer;
+    }
+
+    .shield-svg {
+      width: 22px;
+      height: 22px;
+      border-radius: 5px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid var(--emerald);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--emerald);
+    }
+
+    .brand-logo-ai { color: var(--emerald); }
+
+    .header-pill {
+      padding: 3px 8px;
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      font-size: calc(11px * var(--font-scale));
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--emerald);
+      box-shadow: 0 0 7px var(--emerald);
+    }
+    .status-dot.amber { background: var(--amber); box-shadow: 0 0 7px var(--amber); }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .clock-pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: calc(11.5px * var(--font-scale));
+      color: var(--text-main);
+      padding: 3px 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 5px;
+    }
+
+    .btn-header {
+      background: var(--bg-card);
+      color: var(--text-main);
+      border: 1px solid var(--border-subtle);
+      padding: 4px 9px;
+      border-radius: 5px;
+      font-size: calc(11px * var(--font-scale));
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+    }
+
+    .btn-header:hover, .btn-header.active {
+      border-color: var(--cyan);
+      background: var(--bg-card-hover);
+      color: #fff;
+    }
+
+    /* ================= 2. 6-CARD KPI BAR ================= */
+    #kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 8px;
+      padding: 7px 12px;
+      flex-shrink: 0;
+    }
+
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 7px 11px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 68px;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .kpi-card.highlight-emerald {
+      border-color: rgba(16, 185, 129, 0.45);
+      box-shadow: inset 0 0 16px rgba(16, 185, 129, 0.06);
+    }
+
+    .kpi-card.highlight-amber {
+      border-color: rgba(245, 158, 11, 0.45);
+    }
+
+    .kpi-label {
+      font-size: calc(10px * var(--font-scale));
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .kpi-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: clamp(17px, 1.65vw, 23px);
+      font-weight: 800;
+      margin: 2px 0;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .kpi-value.emerald { color: var(--emerald); }
+    .kpi-value.rose { color: var(--rose); }
+    .kpi-value.amber { color: var(--amber); }
+
+    .kpi-sub {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: calc(10.5px * var(--font-scale));
+      color: var(--text-dim);
+      gap: 4px;
+      white-space: nowrap;
+    }
+
+    /* ================= 3. MAIN SPLIT WORKSPACE ================= */
+    .workspace {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 52% 48%;
+      gap: 10px;
+      padding: 0 12px 10px 12px;
+      min-height: 0;
+      min-width: 0;
+    }
+
+    .left-column {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 0;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    #radar-panel {
+      flex: 1;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      position: relative;
+      overflow: hidden;
+      min-height: 180px;
+      min-width: 0;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+      background: #070d19;
+    }
+
+    .radar-overlay-pill {
+      position: absolute;
+      top: 8px;
+      left: 44px;
+      z-index: 500;
+      background: rgba(11, 19, 36, 0.9);
+      border: 1px solid var(--border-subtle);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      color: var(--cyan);
+      font-weight: 700;
+      pointer-events: none;
+    }
+    .radar-overlay-pill span {
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    .attack-banner {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      right: 10px;
+      z-index: 500;
+      background: rgba(15, 23, 42, 0.96);
+      border: 1.5px solid var(--rose);
+      box-shadow: 0 8px 24px rgba(244, 63, 94, 0.45);
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 7px;
+      font-size: 11.5px;
+      font-weight: 800;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Bottom 3 Telemetry Charts */
+    #charts-grid {
+      height: clamp(112px, 16.5vh, 142px);
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      flex-shrink: 0;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .chart-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 6px 8px;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      min-width: 0;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .chart-title {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex-shrink: 0;
+    }
+
+    .chart-canvas-wrap {
+      flex: 1;
+      position: relative;
+      width: 100%;
+      min-height: 0;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .chart-canvas-wrap canvas {
+      max-width: 100% !important;
+      max-height: 100% !important;
+    }
+
+    /* Right Column: Live Operations & Analyst Queues */
+    #ops-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      min-width: 0;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .ops-tabs-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 12px 6px 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .ops-tabs {
+      display: flex;
+      gap: 14px;
+    }
+
+    .ops-tab {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: calc(12px * var(--font-scale));
+      font-weight: 700;
+      cursor: pointer;
+      padding-bottom: 4px;
+      border-bottom: 2px solid transparent;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .ops-tab.active {
+      color: #fff;
+      border-bottom-color: var(--cyan);
+    }
+
+    .tab-badge {
+      padding: 1px 6px;
+      border-radius: 999px;
+      font-size: 10.5px;
+      font-weight: 800;
+    }
+
+    .tab-badge.amber { background: var(--amber); color: #000; }
+    .tab-badge.rose { background: var(--rose); color: #fff; }
+
+    .ops-filters-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      padding: 6px 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+
+    .filter-pills {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .filter-pill {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      padding: 3px 8px;
+      border-radius: 5px;
+      font-size: 10.5px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .filter-pill.active {
+      background: var(--cyan);
+      color: #020617;
+      border-color: var(--cyan);
+      font-weight: 700;
+    }
+
+    .search-input {
+      background: var(--bg-deep);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 4px 8px;
+      border-radius: 5px;
+      font-size: 11px;
+      width: 155px;
+    }
+
+    #buffer-pill {
+      position: absolute;
+      top: 78px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 20;
+      background: var(--amber);
+      color: #020617;
+      font-weight: 800;
+      font-size: 11px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+      cursor: pointer;
+      display: none;
+    }
+
+    .table-container {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      user-select: text;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      table-layout: fixed;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      background: var(--bg-panel);
+      color: var(--text-muted);
+      font-size: 10.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--border-subtle);
+      z-index: 2;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid rgba(28, 43, 75, 0.5);
+      transition: background 0.12s ease;
+      cursor: pointer;
+    }
+
+    tbody tr:hover {
+      background: var(--bg-card-hover);
+    }
+
+    td {
+      padding: 5px 8px;
+      font-size: calc(11.5px * var(--font-scale));
+      vertical-align: middle;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .buyer-link {
+      color: #ffffff;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    tbody tr:hover .buyer-link {
+      color: var(--cyan);
+      text-decoration: underline;
+    }
+
+    .prob-bar-wrap {
+      width: 58px;
+      height: 4px;
+      background: #060b16;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 2px;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .prob-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+    }
+
+    .source-chip {
+      display: inline-block;
+      font-size: 9.5px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: rgba(56, 189, 248, 0.12);
+      color: var(--cyan);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      margin-top: 2px;
+      white-space: nowrap;
+    }
+
+    .verdict-pill {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .verdict-AUTHORIZED { background: rgba(16, 185, 129, 0.15); color: var(--emerald); border: 1px solid rgba(16, 185, 129, 0.4); }
+    .verdict-FRAUD_BLOCKED { background: rgba(244, 63, 94, 0.18); color: var(--rose); border: 1px solid rgba(244, 63, 94, 0.45); }
+    .verdict-NEEDS_REVIEW { background: rgba(245, 158, 11, 0.18); color: var(--amber); border: 1px solid rgba(245, 158, 11, 0.45); }
+    .verdict-DECLINED_WARNING { background: rgba(168, 85, 247, 0.18); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.45); }
+    .verdict-BANNED_RETRY { background: rgba(244, 63, 94, 0.28); color: #fda4af; border: 1px solid var(--rose); }
+
+    .action-btn {
+      padding: 3px 8px;
+      border-radius: 4px;
+      border: none;
+      font-size: 10.5px;
+      font-weight: 800;
+      cursor: pointer;
+      margin-right: 3px;
+    }
+    .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .action-approve { background: var(--emerald); color: #020617; }
+    .action-block { background: var(--rose); color: #fff; }
+
+    /* ================= 4. PRESENTER DECK & FORENSIC MODALS ================= */
+    #presenter-deck {
+      position: fixed;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9000;
+      background: rgba(11, 19, 36, 0.97);
+      border: 1px solid var(--cyan);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.8), 0 0 20px rgba(56, 189, 248, 0.25);
+      border-radius: 10px;
+      padding: 8px 14px;
+      display: none;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      max-width: 96vw;
+    }
+    #presenter-deck.open { display: flex; }
+
+    .deck-btn {
+      padding: 5px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-card);
+      color: #fff;
+      font-weight: 700;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    .deck-btn:hover:not(:disabled) { transform: translateY(-1px); border-color: var(--cyan); }
+    .deck-btn:disabled { opacity: 0.45; cursor: wait; }
+    .deck-btn.danger { background: rgba(244, 63, 94, 0.2); border-color: var(--rose); }
+    .deck-btn.warning { background: rgba(245, 158, 11, 0.2); border-color: var(--amber); }
+    .deck-btn.info { background: rgba(56, 189, 248, 0.16); border-color: var(--cyan); }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.82);
+      backdrop-filter: blur(5px);
+      z-index: 9500;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-backdrop.open { display: flex; }
+
+    .modal-card {
+      background: linear-gradient(180deg, #0f172a 0%, #091020 100%);
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85);
+      border-radius: 12px;
+      width: 660px;
+      max-width: 94vw;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 18px;
+      user-select: text;
+    }
+
+    .forensic-status-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+    .forensic-status-banner.frozen { background: rgba(244, 63, 94, 0.14); border: 1px solid rgba(244, 63, 94, 0.45); }
+    .forensic-status-banner.active { background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.4); }
+
+    .forensic-kpi-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .forensic-kpi-box {
+      background: rgba(14, 24, 45, 0.9);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 8px 10px;
+    }
+    .forensic-kpi-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 3px;
+    }
+    .forensic-kpi-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14.5px;
+      font-weight: 800;
+    }
+
+    .forensic-detail-grid {
+      background: rgba(14, 24, 45, 0.75);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 14px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 14px;
+    }
+    .forensic-field-label {
+      font-size: 10px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .forensic-field-val {
+      font-size: 12px;
+      font-weight: 700;
+      margin-top: 2px;
+    }
+
+    .risk-meter-track {
+      width: 100%;
+      height: 6px;
+      background: #060b16;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 4px;
+      border: 1px solid var(--border-subtle);
+    }
+    .risk-meter-fill { height: 100%; border-radius: 999px; }
+
+    .forensic-history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .forensic-history-item {
+      background: rgba(14, 24, 45, 0.7);
+      border: 1px solid var(--border-subtle);
+      border-left: 3px solid var(--cyan);
+      border-radius: 6px;
+      padding: 7px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 11.5px;
+      flex-wrap: wrap;
+    }
+
+    /* ================= 5. LAUNCH SPLASH & SPOTLIGHT TOUR ================= */
+    #sentinel-splash {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      background: radial-gradient(circle at 50% 35%, #0f172a 0%, #020617 75%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+    }
+    #sentinel-splash.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      display: none !important;
+    }
+
+    .splash-badge {
+      padding: 5px 14px;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #34d399;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.3px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    .splash-title {
+      font-size: clamp(2.8rem, 6.5vw, 5.2rem);
+      font-weight: 900;
+      letter-spacing: -2px;
+      line-height: 1;
+      margin-bottom: 14px;
+      color: #f8fafc;
+    }
+    .splash-title span {
+      background: linear-gradient(135deg, #38bdf8 0%, #10b981 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .splash-subtitle {
+      max-width: 600px;
+      color: #94a3b8;
+      font-size: clamp(0.92rem, 1.5vw, 1.05rem);
+      line-height: 1.55;
+      margin-bottom: 30px;
+    }
+    .splash-start-btn {
+      position: relative;
+      z-index: 100000;
+      cursor: pointer;
+      padding: 14px 40px;
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: #020617;
+      background: linear-gradient(135deg, #10b981 0%, #38bdf8 100%);
+      border: none;
+      border-radius: 10px;
+      box-shadow: 0 0 28px rgba(16, 185, 129, 0.45);
+    }
+    .splash-skip-direct {
+      position: relative;
+      z-index: 100000;
+      margin-top: 14px;
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 0.85rem;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    #tour-layer { position: fixed; inset: 0; z-index: 99990; display: none; }
+    #tour-layer.active { display: block; }
+    #tour-spotlight {
+      position: fixed;
+      border-radius: 8px;
+      border: 2px solid #38bdf8;
+      box-shadow: 0 0 0 9999px rgba(2, 6, 23, 0.84), 0 0 24px rgba(56, 189, 248, 0.65);
+      transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+      pointer-events: none;
+      z-index: 99991;
+    }
+    #tour-dialog {
+      position: fixed;
+      z-index: 99992;
+      width: 340px;
+      max-width: calc(100vw - 28px);
+      background: #0f172a;
+      border: 1px solid #38bdf8;
+      border-radius: 10px;
+      padding: 16px;
+      color: #f8fafc;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85);
+    }
+    .tour-step-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .tour-step-badge {
+      font-size: 10.5px; font-weight: 800; color: #38bdf8;
+      background: rgba(56, 189, 248, 0.14); padding: 3px 8px; border-radius: 5px;
+    }
+    .tour-skip-btn { background: none; border: none; color: #94a3b8; font-size: 11px; cursor: pointer; }
+    .tour-title { font-size: 0.96rem; font-weight: 800; margin-bottom: 6px; }
+    .tour-desc { font-size: 0.84rem; line-height: 1.5; color: #cbd5e1; margin-bottom: 14px; }
+    .tour-footer { display: flex; justify-content: flex-end; }
+    .tour-understood-btn {
+      cursor: pointer; background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: #020617; font-weight: 800; font-size: 0.82rem; padding: 8px 18px; border: none; border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="vignette-flash"></div>
+  <div id="toast-box"></div>
+
+  <!-- ================= FULL-SCREEN LAUNCH SPLASH ================= -->
+  <div id="sentinel-splash">
+    <div class="splash-badge">● Autonomous SOC Engine • 58 Algerian Wilayas Monitored</div>
+    <h1 class="splash-title">SENTINEL<span>AI</span></h1>
+    <p class="splash-subtitle">
+      Real-Time E-Commerce Fraud &amp; Impossible-Travel Velocity Defense Platform for Algeria.
+      Powered by a neural-network model + kinematic rule engine.
+    </p>
+    <button type="button" class="splash-start-btn" id="btn-start-tour" onclick="window.startSentinelTour()">▶ Start Simulation</button>
+    <button type="button" class="splash-skip-direct" id="btn-skip-all" onclick="window.skipSentinelTour()">Skip briefing &amp; launch live simulation directly</button>
+  </div>
+
+  <!-- ================= GAME-STYLE SPOTLIGHT TUTORIAL ================= -->
+  <div id="tour-layer">
+    <div id="tour-spotlight"></div>
+    <div id="tour-dialog">
+      <div class="tour-step-header">
+        <span class="tour-step-badge" id="tour-badge">BRIEFING 1 / 5</span>
+        <button type="button" class="tour-skip-btn" id="tour-skip" onclick="window.skipSentinelTour()">Skip Tour ✕</button>
+      </div>
+      <h3 class="tour-title" id="tour-title">Feature Title</h3>
+      <p class="tour-desc" id="tour-desc">Feature description.</p>
+      <div class="tour-footer">
+        <button type="button" class="tour-understood-btn" id="tour-next" onclick="window.nextSentinelTourStep()">Understood ✓</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 1. TOP HEADER BAR ================= -->
+  <header>
+    <div class="brand-group">
+      <div class="brand-logo" id="shield-trigger" title="Click or press P for Presenter Deck">
+        <span class="shield-svg">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </span>
+        <span>SENTINEL<span class="brand-logo-ai">AI</span></span>
+      </div>
+      <span style="color: var(--text-muted); font-size: 11px;">E-Commerce Fraud Defense, Algeria</span>
+      <span class="header-pill" id="wilayas-pill">58 Wilayas Monitored</span>
+    </div>
+
+    <div class="brand-group">
+      <span class="header-pill" id="connection-pill">
+        <span class="status-dot" id="status-dot"></span>
+        <span id="status-text">LIVE</span>
+      </span>
+      <span class="header-pill" id="model-pill" style="color:var(--emerald)">Neural + Kinematic Engine</span>
+      <span class="header-pill" id="latency-pill">avg 24 ms (p95 34 ms)</span>
+    </div>
+
+    <div class="header-controls" id="header-controls">
+      <span class="clock-pill" id="live-clock">--:--:--</span>
+      <button type="button" class="btn-header" id="btn-presenter" title="Toggle Presenter Deck (Shortcut: P)">🎛 Scenarios (P)</button>
+      <button type="button" class="btn-header" id="btn-audit">Audit Log</button>
+      <button type="button" class="btn-header" id="btn-projector">Projector</button>
+      <button type="button" class="btn-header" id="btn-mute" title="Toggle Audio Alarm (M)">Audio: OFF (M)</button>
+      <button type="button" class="btn-header" id="btn-fullscreen" title="Fullscreen (F)">Fullscreen (F)</button>
+    </div>
+  </header>
+
+  <!-- ================= 2. 6-CARD KPI BAR ================= -->
+  <section id="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Orders Processed</div>
+      <div class="kpi-value" id="kpi-orders">0</div>
+      <div class="kpi-sub"><span id="kpi-wilayas-sub">58 Wilayas</span><span style="color:var(--emerald)">● Active</span></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Approved Volume</div>
+      <div class="kpi-value emerald" id="kpi-approved">0 DZD</div>
+      <div class="kpi-sub"><span id="kpi-approved-usd">~$0</span><span>Verified</span></div>
+    </div>
+    <div class="kpi-card highlight-emerald">
+      <div class="kpi-label">Fraud Prevented</div>
+      <div class="kpi-value emerald" id="kpi-prevented">0 DZD</div>
+      <div class="kpi-sub"><span id="kpi-prevented-usd">~$0 saved</span><span>Protected</span></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Attacks Blocked</div>
+      <div class="kpi-value rose" id="kpi-blocked">0</div>
+      <div class="kpi-sub"><span id="kpi-attack-rate">0.0% Block Rate</span><span>Intercepted</span></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Banned Accounts</div>
+      <div class="kpi-value amber" id="kpi-banned">0</div>
+      <div class="kpi-sub"><span>Auto-Frozen</span><span>3/3 or Velocity</span></div>
+    </div>
+    <div class="kpi-card highlight-amber">
+      <div class="kpi-label">Pending Review</div>
+      <div class="kpi-value amber" id="kpi-review">0</div>
+      <div class="kpi-sub"><span id="kpi-review-dzd">0 DZD held</span><span>Analyst Queue</span></div>
+    </div>
+  </section>
+
+  <!-- ================= 3. MAIN SPLIT WORKSPACE ================= -->
+  <main class="workspace">
+    <div class="left-column">
+      <div id="radar-panel">
+        <div class="radar-overlay-pill">
+          Geospatial Velocity &amp; Card Decline Radar <span>• Click points for case file</span>
+        </div>
+        <div id="map"></div>
+        <div class="attack-banner" id="attack-banner">
+          <span id="attack-banner-text">ACCOUNT FROZEN</span>
+          <span style="font-size:10.5px; color:var(--rose);">AUTO-BLOCKED</span>
+        </div>
+      </div>
+
+      <div id="charts-grid">
+        <div class="chart-card">
+          <div class="chart-title">1. Orders per 10s (Approved • Blocked • Review)</div>
+          <div class="chart-canvas-wrap"><canvas id="chart-throughput"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">2. Blocked By Product Category</div>
+          <div class="chart-canvas-wrap"><canvas id="chart-categories"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">3. Attack Locations (Remote / Foreign)</div>
+          <div class="chart-canvas-wrap"><canvas id="chart-origins"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="ops-panel">
+      <div class="ops-tabs-bar">
+        <div class="ops-tabs">
+          <button type="button" class="ops-tab active" data-tab="live">Live Operations</button>
+          <button type="button" class="ops-tab" data-tab="review">Needs Review <span class="tab-badge amber" id="badge-review">0</span></button>
+          <button type="button" class="ops-tab" data-tab="banned">Banned Queue <span class="tab-badge rose" id="badge-banned">0</span></button>
+        </div>
+        <button type="button" class="btn-header" id="btn-csv">Export CSV</button>
+      </div>
+
+      <div class="ops-filters-bar" id="filters-bar">
+        <div class="filter-pills">
+          <button type="button" class="filter-pill active" data-filter="ALL">All</button>
+          <button type="button" class="filter-pill" data-filter="AUTHORIZED">Approved</button>
+          <button type="button" class="filter-pill" data-filter="NEEDS_REVIEW">Review</button>
+          <button type="button" class="filter-pill" data-filter="DECLINED_WARNING">Declined (1/3 → Blocked)</button>
+          <button type="button" class="filter-pill" data-filter="FRAUD_BLOCKED">Fraud</button>
+          <button type="button" class="filter-pill" data-filter="BANNED_RETRY">Banned Retries</button>
+        </div>
+        <input type="text" class="search-input" id="search-box" placeholder="Search buyer / Wilaya / ID.." />
+      </div>
+
+      <div id="buffer-pill" title="Click or move mouse off table to flush buffered orders"></div>
+
+      <div class="table-container" id="table-scroll">
+        <table>
+          <thead id="table-head">
+            <tr>
+              <th style="width:14%">Time / ID</th>
+              <th style="width:16%">Buyer</th>
+              <th style="width:19%">Item &amp; Amount</th>
+              <th style="width:22%">Route &amp; Kinematics</th>
+              <th style="width:14%">Fraud Prob.</th>
+              <th style="width:15%">Verdict</th>
+            </tr>
+          </thead>
+          <tbody id="ops-tbody">
+            <tr data-empty="1"><td colspan="6" style="text-align:center; padding:24px; color:var(--text-muted);">Waiting for simulation launch...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- ================= 4. PRESENTER SCENARIO CONTROL DECK ================= -->
+  <div id="presenter-deck">
+    <span style="font-weight:800; color:var(--cyan); font-size:11px;">PRESENTER DECK:</span>
+    <button type="button" class="deck-btn danger" data-scenario="impossible_travel">1. Impossible Travel</button>
+    <button type="button" class="deck-btn warning" data-scenario="card_decline">2. 3x Declines → Ban</button>
+    <button type="button" class="deck-btn info" data-scenario="needs_review">3. Needs-Review Case</button>
+    <button type="button" class="deck-btn" data-scenario="banned_retry">4. Banned Retry</button>
+    <button type="button" class="deck-btn" id="btn-pause-resume">Pause</button>
+    <button type="button" class="deck-btn" id="btn-speed">Speed: Normal (2.5s)</button>
+    <button type="button" class="deck-btn" id="btn-reset-demo">Reset Demo</button>
+    <button type="button" class="deck-btn" id="btn-close-deck">✕</button>
+  </div>
+
+  <!-- ================= 5. AUDIT LOG & CASE FORENSICS MODAL ================= -->
+  <div class="modal-backdrop" id="modal-backdrop">
+    <div class="modal-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--border-subtle);">
+        <h3 id="modal-title" style="font-size:14.5px; font-weight:800; color:var(--cyan);">Case Forensics</h3>
+        <button type="button" class="btn-header" id="btn-close-modal">✕ Close (Esc)</button>
+      </div>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- ================= APPLICATION JAVASCRIPT ================= -->
+  <script>
+    // ===================================================================
+    // 0. TOUR & SPLASH CONTROLLERS
+    // ===================================================================
+    window.SENTINEL_PAUSED = true;
+    let currentStep = 0;
+
+    const tourSteps = [
+      {
+        targetId: "kpi-grid",
+        title: "1. Real-Time Executive KPI Telemetry",
+        desc: "Tracks processed orders across all 58 Algerian Wilayas, verified DZD volume, prevented fraud losses, auto-frozen accounts, and cases held for analyst review."
+      },
+      {
+        targetId: "radar-panel",
+        title: "2. Geospatial Velocity & Card Decline Radar",
+        desc: "Monitors transaction kinematics across Algeria. When two orders occur faster than 900 km/h, the camera frames the route, draws a proportional geodesic arc, and freezes the account."
+      },
+      {
+        targetId: "ops-panel",
+        title: "3. Live Operations & Analyst Review Queues",
+        desc: "Streams every order with its Fraud Probability percentage, decision source chip, and exact distance/time arithmetic. Switch to 'Needs Review' to Approve or Block suspicious orders."
+      },
+      {
+        targetId: "charts-grid",
+        title: "4. Live Threat & Category Telemetry",
+        desc: "Three strictly bounded charts track 10-second order throughput (Approved, Blocked, Review), targeted product categories, and remote/foreign attack locations."
+      },
+      {
+        targetId: "header-controls",
+        title: "5. Tactical Controls & Presenter Deck",
+        desc: "Verify model status and rolling/P95 decision latency, or press 'P' to open the Presenter Deck and trigger Impossible Travel, 3x Declines, or Review cases on cue."
+      }
+    ];
+
+    function positionTourStep(stepIndex) {
+      const step = tourSteps[stepIndex];
+      const el = document.getElementById(step.targetId);
+      const spotlight = document.getElementById("tour-spotlight");
+      const dialog = document.getElementById("tour-dialog");
+      if (!el || !spotlight || !dialog) return;
+
+      const rect = el.getBoundingClientRect();
+      const pad = 5;
+      const top = Math.max(4, rect.top - pad);
+      const left = Math.max(4, rect.left - pad);
+      const width = Math.min(window.innerWidth - 8, rect.width + pad * 2);
+      const height = Math.min(window.innerHeight - 8, rect.height + pad * 2);
+
+      spotlight.style.top = top + "px";
+      spotlight.style.left = left + "px";
+      spotlight.style.width = width + "px";
+      spotlight.style.height = height + "px";
+
+      document.getElementById("tour-badge").textContent = `BRIEFING ${stepIndex + 1} OF ${tourSteps.length}`;
+      document.getElementById("tour-title").textContent = step.title;
+      document.getElementById("tour-desc").textContent = step.desc;
+      document.getElementById("tour-next").textContent =
+        stepIndex === tourSteps.length - 1 ? "Understood — Launch Live Feed 🚀" : "Understood ✓";
+
+      const dWidth = 340;
+      const dHeight = 195;
+      const margin = 14;
+
+      let dTop = top + height + margin;
+      let dLeft = left + width / 2 - dWidth / 2;
+
+      if (dTop + dHeight > window.innerHeight - 12) {
+        if (top - dHeight - margin > 12) dTop = top - dHeight - margin;
+        else if (left + width + dWidth + margin < window.innerWidth) { dTop = Math.max(12, top + 8); dLeft = left + width + margin; }
+        else if (left - dWidth - margin > 12) { dTop = Math.max(12, top + 8); dLeft = left - dWidth - margin; }
+        else dTop = Math.max(12, window.innerHeight - dHeight - 16);
+      }
+
+      dialog.style.top = Math.max(12, Math.min(window.innerHeight - dHeight - 12, dTop)) + "px";
+      dialog.style.left = Math.max(12, Math.min(window.innerWidth - dWidth - 12, dLeft)) + "px";
+    }
+
+    window.startSentinelTour = function() {
+      const splash = document.getElementById("sentinel-splash");
+      const tourLayer = document.getElementById("tour-layer");
+      if (splash) {
+        splash.classList.add("hidden");
+        splash.style.display = "none";
+      }
+      if (tourLayer) {
+        tourLayer.classList.add("active");
+        tourLayer.style.display = "block";
+      }
+      ensureAudioCtx();
+      currentStep = 0;
+      positionTourStep(currentStep);
+    };
+
+    window.nextSentinelTourStep = function() {
+      currentStep++;
+      if (currentStep >= tourSteps.length) {
+        window.skipSentinelTour();
+      } else {
+        positionTourStep(currentStep);
+      }
+    };
+
+    window.skipSentinelTour = async function() {
+      const splash = document.getElementById("sentinel-splash");
+      const tourLayer = document.getElementById("tour-layer");
+      if (tourLayer) {
+        tourLayer.classList.remove("active");
+        tourLayer.style.display = "none";
+      }
+      if (splash) {
+        splash.classList.add("hidden");
+        splash.style.display = "none";
+      }
+      window.SENTINEL_PAUSED = false;
+      ensureAudioCtx();
+      if (map) {
+        try { map.invalidateSize(); } catch (e) {}
+      }
+
+      while (splashQueue.length > 0) {
+        handleIncomingOrder(splashQueue.shift());
+      }
+
+      if (hasLiveBackend) {
+        fetch("/api/demo/resume", { method: "POST", headers: headersWithKey() }).catch(() => {});
+      } else if (allOrders.length === 0) {
+        const first = generateBrowserOrder("legit");
+        recordBrowserStats(first);
+        handleIncomingOrder(first);
+        setTimeout(() => {
+          if (!demoPaused) {
+            const revOrder = generateBrowserOrder("needs_review");
+            recordBrowserStats(revOrder);
+            handleIncomingOrder(revOrder);
+            saveBrowserState();
+          }
+        }, 900);
+      }
+    };
+
+    // ===================================================================
+    // 1. UTILITIES, ESCAPING, FORMATTING & SAFE AUDIO CONTEXT
+    // ===================================================================
+    const urlParams = new URLSearchParams(window.location.search);
+    const presenterKey = urlParams.get("key") || "";
+    let dzdPerUsd = 135;
+
+    function esc(str) {
+      return String(str ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function fmtNum(n) {
+      return Number(n || 0).toLocaleString("en-US");
+    }
+
+    function fmtDZD(n) {
+      return fmtNum(Math.round(Number(n || 0))) + " DZD";
+    }
+
+    function fmtAlgiersTime(epochMs, fallbackStr) {
+      if (!epochMs) return fallbackStr || "--:--:--";
+      try {
+        return new Date(epochMs).toLocaleTimeString("en-GB", { timeZone: "Africa/Algiers" });
+      } catch (e) {
+        return new Date(epochMs).toLocaleTimeString("en-GB");
+      }
+    }
+
+    function showToast(msg, bg = "rgba(244, 63, 94, 0.95)") {
+      const box = document.getElementById("toast-box");
+      const el = document.createElement("div");
+      el.className = "toast-msg";
+      el.style.background = bg;
+      el.textContent = msg;
+      box.appendChild(el);
+      setTimeout(() => el.remove(), 4000);
+    }
+
+    let sharedAudioCtx = null;
+    let audioMuted = true;
+
+    function ensureAudioCtx() {
+      try {
+        if (!sharedAudioCtx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) sharedAudioCtx = new AudioCtx();
+        }
+        if (sharedAudioCtx && sharedAudioCtx.state === "suspended") {
+          sharedAudioCtx.resume().catch(() => {});
+        }
+      } catch (e) {}
+    }
+
+    function playAlertTone(freq = 580, duration = 0.2) {
+      if (audioMuted) return;
+      try {
+        ensureAudioCtx();
+        if (!sharedAudioCtx) return;
+        const osc = sharedAudioCtx.createOscillator();
+        const gain = sharedAudioCtx.createGain();
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(freq, sharedAudioCtx.currentTime);
+        gain.gain.setValueAtTime(0.07, sharedAudioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, sharedAudioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(sharedAudioCtx.destination);
+        osc.start();
+        osc.stop(sharedAudioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function updateClock() {
+      const el = document.getElementById("live-clock");
+      if (el) el.textContent = fmtAlgiersTime(Date.now());
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // ===================================================================
+    // 2. STATE STORE
+    // ===================================================================
+    let hasLiveBackend = false;
+    let demoPaused = false;
+    let currentSpeedSec = 2.5;
+    let activeTab = "live";
+    let activeFilter = "ALL";
+    let searchQuery = "";
+    let tableHovered = false;
+
+    const allOrders = [];
+    const bufferedOrders = [];
+    const splashQueue = [];
+    const bannedAccounts = new Map();
+    const pendingReviewMap = new Map();
+    const auditLogs = [];
+
+    let serverStats = {
+      processed: 0,
+      approved_dzd: 0,
+      prevented_dzd: 0,
+      blocked_count: 0,
+      avg_latency_ms: 24.2,
+      p95_latency_ms: 33.8,
+      by_category: {
+        "Electronics": 0, "Home Appliances": 0, "Jewelry & Watches": 0,
+        "Fashion & Clothing": 0, "Mobile & Recharge": 0, "Groceries / Superette": 0
+      },
+      by_origin: {},
+      per_10s: []
+    };
+
+    // ===================================================================
+    // 3. ACCURATE DARK SOC MAP (ESRI DARK CANVAS + NATURAL EARTH GEOJSON)
+    // ===================================================================
+    let map = null;
+    let baseGeoLayer = null;
+    let markersLayer = null;
+    const markerQueue = [];
+    let lastUserMapDrag = 0;
+    let returnFlyTimer = null;
+
+    const ALGERIA_RING_GEOJSON = {
+      "type": "FeatureCollection",
+      "features": [{
+        "type": "Feature",
+        "properties": { "name": "Algeria", "iso_a3": "DZA" },
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[
+            [-2.21,35.08],[-1.45,35.29],[-0.64,35.70],[-0.12,35.85],[0.14,36.02],
+            [0.90,36.43],[2.19,36.60],[3.05,36.80],[3.91,36.89],[5.08,36.77],
+            [5.76,36.82],[6.57,37.01],[7.77,36.90],[8.64,36.94],[8.38,36.45],
+            [8.35,35.45],[7.92,34.40],[7.55,33.75],[8.15,32.92],[9.25,31.95],
+            [9.55,30.24],[9.48,29.40],[9.85,28.05],[9.90,27.20],[9.50,26.25],
+            [9.90,25.35],[10.18,24.50],[11.55,23.85],[11.99,23.50],[8.55,21.85],
+            [5.82,19.45],[4.25,19.12],[3.10,19.95],[1.20,20.85],[-1.80,22.90],
+            [-4.83,25.00],[-6.75,26.15],[-8.67,27.32],[-8.67,27.67],[-8.67,28.70],
+            [-6.80,29.50],[-5.50,29.85],[-3.65,30.65],[-2.25,31.65],[-1.25,32.12],
+            [-1.65,33.15],[-1.85,34.65],[-2.21,35.08]
+          ]]
+        }
+      }]
+    };
+
+    function isAlgeriaFeature(props) {
+      if (!props) return false;
+      const n = String(props.name || props.NAME || props.ADMIN || props.admin || "").toLowerCase();
+      const iso = String(props.iso || props.iso_a3 || props.ISO_A3 || props.ADM0_A3 || "").toUpperCase();
+      return n === "algeria" || iso === "DZA";
+    }
+
+    function applyGeoJsonOverlay(geojsonData) {
+      if (!map) return;
+      if (baseGeoLayer) {
+        map.removeLayer(baseGeoLayer);
+        baseGeoLayer = null;
+      }
+      baseGeoLayer = L.geoJSON(geojsonData, {
+        style: feature => {
+          const isDz = isAlgeriaFeature(feature.properties);
+          return {
+            color: isDz ? "#38bdf8" : "#1e293b",
+            weight: isDz ? 2.0 : 0.8,
+            opacity: isDz ? 0.95 : 0.55,
+            fillColor: isDz ? "#0ea5e9" : "#0b1324",
+            fillOpacity: isDz ? 0.12 : 0.15
+          };
+        }
+      }).addTo(map);
+      baseGeoLayer.bringToBack();
+    }
+
+    function initMap() {
+      if (typeof L === "undefined" || map) return;
+      map = L.map("map", {
+        center: [28.6, 2.6],
+        zoom: 5,
+        zoomControl: true,
+        attributionControl: false
+      });
+
+      map.on("dragstart zoomstart", () => {
+        lastUserMapDrag = Date.now();
+      });
+
+      L.tileLayer(
+        "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+        { maxZoom: 16 }
+      ).addTo(map);
+
+      L.tileLayer(
+        "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}",
+        { maxZoom: 16, opacity: 0.75 }
+      ).addTo(map);
+
+      applyGeoJsonOverlay(ALGERIA_RING_GEOJSON);
+
+      fetch("/static/geojson/ne_50m_countries.geojson")
+        .then(r => r.ok ? r.json() : fetch("https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_110m_admin_0_countries.geojson").then(r2 => r2.ok ? r2.json() : null))
+        .then(data => {
+          if (data && data.features) {
+            applyGeoJsonOverlay(data);
+          }
+        })
+        .catch(() => {});
+
+      markersLayer = L.layerGroup().addTo(map);
+
+      const radarEl = document.getElementById("radar-panel");
+      if (window.ResizeObserver && radarEl) {
+        new ResizeObserver(() => {
+          if (map) map.invalidateSize();
+        }).observe(radarEl);
+      }
+    }
+
+    // ===================================================================
+    // 4. THREE STRICTLY CONTAINED TELEMETRY CHARTS (Chart.js)
+    // ===================================================================
+    let chartThroughput = null;
+    let chartCategories = null;
+    let chartOrigins = null;
+
+    function initCharts() {
+      if (typeof Chart === "undefined" || chartThroughput) return;
+      Chart.defaults.color = "#94a3b8";
+      Chart.defaults.font.size = 10;
+
+      const ctx1 = document.getElementById("chart-throughput").getContext("2d");
+      chartThroughput = new Chart(ctx1, {
+        type: "line",
+        data: {
+          labels: ["--", "--", "--", "--", "--", "Now"],
+          datasets: [
+            { label: "Approved", data: [0, 0, 0, 0, 0, 0], borderColor: "#10b981", tension: 0.3, borderWidth: 2, pointRadius: 0 },
+            { label: "Blocked", data: [0, 0, 0, 0, 0, 0], borderColor: "#f43f5e", tension: 0.3, borderWidth: 2, pointRadius: 0 },
+            { label: "Review", data: [0, 0, 0, 0, 0, 0], borderColor: "#f59e0b", tension: 0.3, borderWidth: 2, pointRadius: 0 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          layout: { padding: { right: 6, left: 2, top: 3, bottom: 2 } },
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, ticks: { maxRotation: 0 } },
+            y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: "rgba(255,255,255,0.04)" } }
+          }
+        }
+      });
+
+      const ctx2 = document.getElementById("chart-categories").getContext("2d");
+      chartCategories = new Chart(ctx2, {
+        type: "bar",
+        data: {
+          labels: ["Electronics", "Appliances", "Jewelry", "Fashion", "Mobile", "Groceries"],
+          datasets: [{
+            data: [0, 0, 0, 0, 0, 0],
+            backgroundColor: ["#f43f5e", "#f59e0b", "#a855f7", "#38bdf8", "#fb7185", "#10b981"],
+            borderRadius: 3,
+            maxBarThickness: 12
+          }]
+        },
+        options: {
+          indexAxis: "y",
+          responsive: true,
+          maintainAspectRatio: false,
+          layout: { padding: { right: 10, left: 2, top: 2, bottom: 2 } },
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: "rgba(255,255,255,0.04)" } },
+            y: { grid: { display: false } }
+          }
+        }
+      });
+
+      const ctx3 = document.getElementById("chart-origins").getContext("2d");
+      chartOrigins = new Chart(ctx3, {
+        type: "bar",
+        data: {
+          labels: ["Paris, FR", "London, UK", "Frankfurt, DE", "Istanbul, TR", "Madrid, ES"],
+          datasets: [{
+            data: [0, 0, 0, 0, 0],
+            backgroundColor: "#38bdf8",
+            borderRadius: 3,
+            maxBarThickness: 12
+          }]
+        },
+        options: {
+          indexAxis: "y",
+          responsive: true,
+          maintainAspectRatio: false,
+          layout: { padding: { right: 12, left: 2, top: 2, bottom: 2 } },
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: "rgba(255,255,255,0.04)" } },
+            y: { grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    initMap();
+    initCharts();
+
+    function plotOrderOnMap(order, animateCamera = true) {
+      if (!map || !markersLayer) return;
+      const orig = order.origin;
+      const dest = order.destination;
+      const isFraud = order.verdict === "FRAUD_BLOCKED" || order.verdict === "BANNED_RETRY";
+      const isWarn = order.verdict === "NEEDS_REVIEW" || order.verdict === "DECLINED_WARNING";
+      const color = isFraud ? "#f43f5e" : (isWarn ? "#f59e0b" : "#10b981");
+
+      const circle = L.circleMarker([dest.lat, dest.lon], {
+        radius: isFraud ? 6.5 : 4.5,
+        color: color,
+        fillColor: color,
+        fillOpacity: 0.88,
+        weight: 2
+      }).addTo(markersLayer);
+
+      const probPct = Math.round((order.model_score ?? order.risk_score ?? 0.05) * 100);
+
+      circle.bindTooltip(
+        `<b>${esc(order.order_id)}</b> • ${esc(order.buyer_name)}<br/>` +
+        `${esc(orig.name)} → ${esc(dest.name)} (${order.velocity_kmh} km/h)<br/>` +
+        `Fraud Prob: <b>${probPct}%</b> [${esc(order.decision_source)}]`,
+        { direction: "top" }
+      );
+      circle.on("click", () => showForensicsModal(order));
+
+      markerQueue.push(circle);
+      while (markerQueue.length > 40) {
+        const oldest = markerQueue.shift();
+        if (markersLayer.hasLayer(oldest)) markersLayer.removeLayer(oldest);
+      }
+
+      const dLat = dest.lat - orig.lat;
+      const dLon = dest.lon - orig.lon;
+      const degDist = Math.hypot(dLat, dLon);
+
+      if (degDist > 0.25 && (isFraud || isWarn)) {
+        const midLat = (orig.lat + dest.lat) / 2;
+        const midLon = (orig.lon + dest.lon) / 2;
+        const offsetScale = 0.20;
+        const ctrlLat = midLat - dLon * offsetScale;
+        const ctrlLon = midLon + dLat * offsetScale;
+
+        const curvePoints = [];
+        for (let t = 0; t <= 1.001; t += 0.05) {
+          const lat = (1 - t) * (1 - t) * orig.lat + 2 * (1 - t) * t * ctrlLat + t * t * dest.lat;
+          const lon = (1 - t) * (1 - t) * orig.lon + 2 * (1 - t) * t * ctrlLon + t * t * dest.lon;
+          curvePoints.push([lat, lon]);
+        }
+
+        const arc = L.polyline(curvePoints, {
+          color: isFraud ? "#f43f5e" : "#f59e0b",
+          weight: 2.2,
+          dashArray: "5, 5"
+        }).addTo(markersLayer);
+
+        setTimeout(() => {
+          if (markersLayer.hasLayer(arc)) markersLayer.removeLayer(arc);
+        }, 12000);
+
+        if (animateCamera && (Date.now() - lastUserMapDrag > 15000)) {
+          try {
+            map.flyToBounds([[orig.lat, orig.lon], [dest.lat, dest.lon]], {
+              padding: [50, 50],
+              duration: 1.1,
+              maxZoom: 6
+            });
+            if (returnFlyTimer) clearTimeout(returnFlyTimer);
+            returnFlyTimer = setTimeout(() => {
+              if (Date.now() - lastUserMapDrag > 15000) {
+                map.flyTo([28.6, 2.6], 5, { duration: 1.1 });
+              }
+            }, 6000);
+          } catch (e) {}
+        }
+      }
+    }
+
+    function syncChartsFromStats() {
+      if (chartThroughput && serverStats.per_10s && serverStats.per_10s.length) {
+        chartThroughput.data.labels = serverStats.per_10s.map(b => b.label);
+        chartThroughput.data.datasets[0].data = serverStats.per_10s.map(b => b.approved);
+        chartThroughput.data.datasets[1].data = serverStats.per_10s.map(b => b.blocked);
+        chartThroughput.data.datasets[2].data = serverStats.per_10s.map(b => b.review);
+        chartThroughput.update("none");
+      }
+
+      if (chartCategories && serverStats.by_category) {
+        const c = serverStats.by_category;
+        chartCategories.data.datasets[0].data = [
+          c["Electronics"] || 0,
+          c["Home Appliances"] || 0,
+          c["Jewelry & Watches"] || 0,
+          c["Fashion & Clothing"] || 0,
+          c["Mobile & Recharge"] || 0,
+          c["Groceries / Superette"] || 0
+        ];
+        chartCategories.update("none");
+      }
+
+      if (chartOrigins && serverStats.by_origin) {
+        const entries = Object.entries(serverStats.by_origin).sort((a, b) => b[1] - a[1]).slice(0, 5);
+        if (entries.length > 0) {
+          chartOrigins.data.labels = entries.map(e => e[0]);
+          chartOrigins.data.datasets[0].data = entries.map(e => e[1]);
+          chartOrigins.update("none");
+        }
+      }
+    }
+
+    // ===================================================================
+    // 5. DOM-STABLE TABLE RENDERING WITH 1/3 -> 2/3 -> 3/3 BLOCKED BADGES
+    // ===================================================================
+    let bannerLockUntil = 0;
+
+    function triggerIncidentFlash(order) {
+      playAlertTone(560, 0.22);
+      const vf = document.getElementById("vignette-flash");
+      vf.classList.add("active");
+      setTimeout(() => vf.classList.remove("active"), 600);
+
+      const now = Date.now();
+      if (now >= bannerLockUntil || order.velocity_kmh > 900) {
+        bannerLockUntil = now + 5200;
+        const banner = document.getElementById("attack-banner");
+        const bText = document.getElementById("attack-banner-text");
+        bText.textContent = `ACCOUNT FROZEN: ${order.buyer_name} (${order.buyer_id}) — ${fmtDZD(order.amount_dzd)} saved`;
+        banner.style.display = "flex";
+        setTimeout(() => {
+          if (Date.now() >= bannerLockUntil) banner.style.display = "none";
+        }, 5250);
+      }
+    }
+
+    function buildOrderRowHtml(o) {
+      const rawProb = Number(o.model_score ?? o.risk_score ?? 0.06);
+      const probPct = Math.max(1, Math.min(99, Math.round(rawProb * 100)));
+      const scoreColor = probPct >= 80 ? "var(--rose)" : (probPct >= 45 ? "var(--amber)" : "var(--emerald)");
+
+      const timeStr = fmtAlgiersTime(o.epoch_ms, o.timestamp);
+      const kinStr = `${o.distance_km ?? 0} km in ${o.elapsed_min ?? 1} min = ${o.velocity_kmh} km/h`;
+
+      let verdictHtml = `<span class="verdict-pill verdict-${esc(o.verdict)}">${esc(o.verdict.replace("_", " "))}</span>`;
+      if (o.verdict === "DECLINED_WARNING") {
+        verdictHtml = `<span class="verdict-pill verdict-DECLINED_WARNING">DECLINED (${o.attempt_num}/3)</span>`;
+      } else if (o.verdict === "FRAUD_BLOCKED" && (o.is_declined || o.attempt_num >= 3) && String(o.decision_source || "").includes("decline")) {
+        verdictHtml = `<span class="verdict-pill verdict-FRAUD_BLOCKED">BLOCKED (3/3 DECLINES)</span>`;
+      } else if (o.verdict === "NEEDS_REVIEW") {
+        verdictHtml = `
+          <button type="button" class="action-btn action-approve" data-action="approve" data-order-id="${esc(o.order_id)}">✓ Approve</button>
+          <button type="button" class="action-btn action-block" data-action="block" data-order-id="${esc(o.order_id)}">✕ Block</button>
+        `;
+      }
+
+      return `
+        <td style="font-family:'JetBrains Mono',monospace;">
+          <b>${esc(timeStr)}</b><br/>
+          <span style="color:var(--cyan); font-size:10px;">${esc(o.order_id)}</span>
+        </td>
+        <td>
+          <span class="buyer-link">${esc(o.buyer_name)}</span><br/>
+          <span style="color:var(--text-dim); font-family:'JetBrains Mono',monospace; font-size:10px;">${esc(o.buyer_id)}</span>
+        </td>
+        <td>
+          <b style="color:var(--emerald); font-family:'JetBrains Mono',monospace;">${fmtDZD(o.amount_dzd)}</b><br/>
+          <span style="color:var(--text-muted); font-size:10.5px;">${esc(o.item)}</span>
+        </td>
+        <td>
+          <span>${esc(o.origin.name)} → <b>${esc(o.destination.name)}</b></span><br/>
+          <span style="color:${o.velocity_kmh > 900 ? 'var(--rose)' : 'var(--text-dim)'}; font-weight:${o.velocity_kmh > 900 ? '700' : '400'}; font-size:10px;">
+            ${esc(kinStr)}
+          </span>
+        </td>
+        <td style="font-family:'JetBrains Mono',monospace;">
+          <b style="color:${scoreColor}; font-size:12px;">${probPct}%</b>
+          <div class="prob-bar-wrap"><div class="prob-bar-fill" style="width:${probPct}%; background:${scoreColor};"></div></div>
+          <span class="source-chip">${esc(o.decision_source || "MODEL")}</span>
+        </td>
+        <td>${verdictHtml}</td>
+      `;
+    }
+
+    function orderMatchesCurrentView(o) {
+      if (activeTab === "review" && o.verdict !== "NEEDS_REVIEW") return false;
+      if (activeTab === "live" && activeFilter !== "ALL") {
+        if (activeFilter === "DECLINED_WARNING") {
+          const isDeclineBlock = o.verdict === "FRAUD_BLOCKED" && (o.is_declined || String(o.decision_source || "").includes("decline"));
+          if (o.verdict !== "DECLINED_WARNING" && !isDeclineBlock) return false;
+        } else if (o.verdict !== activeFilter) {
+          return false;
+        }
+      }
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const hay = `${o.order_id} ${o.buyer_id} ${o.buyer_name} ${o.origin.name} ${o.destination.name} ${o.item}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    }
+
+    function prependSingleOrderRow(o) {
+      if (activeTab === "banned" || !orderMatchesCurrentView(o)) return;
+      const tbody = document.getElementById("ops-tbody");
+      const emptyRow = tbody.querySelector("tr[data-empty]");
+      if (emptyRow) emptyRow.remove();
+
+      const tr = document.createElement("tr");
+      tr.dataset.orderId = o.order_id;
+      tr.innerHTML = buildOrderRowHtml(o);
+      tbody.insertBefore(tr, tbody.firstChild);
+
+      while (tbody.children.length > 60) {
+        tbody.removeChild(tbody.lastChild);
+      }
+    }
+
+    function renderFullTable() {
+      const tbody = document.getElementById("ops-tbody");
+      const thead = document.getElementById("table-head");
+      tbody.innerHTML = "";
+
+      if (activeTab === "banned") {
+        thead.innerHTML = `
+          <tr>
+            <th style="width:14%">Banned At</th>
+            <th style="width:24%">Account ID (Click for Case)</th>
+            <th style="width:16%">Home Wilaya</th>
+            <th style="width:32%">Trigger Reason</th>
+            <th style="width:14%">Action</th>
+          </tr>
+        `;
+        if (bannedAccounts.size === 0) {
+          tbody.innerHTML = `<tr data-empty="1"><td colspan="5" style="text-align:center; padding:20px; color:var(--text-muted);">No accounts are currently frozen.</td></tr>`;
+          return;
+        }
+        bannedAccounts.forEach(b => {
+          const tr = document.createElement("tr");
+          tr.dataset.buyerId = b.buyer_id;
+          tr.innerHTML = `
+            <td style="font-family:'JetBrains Mono',monospace; color:var(--text-muted);">${esc(b.banned_at)}</td>
+            <td>
+              <span class="buyer-link">${esc(b.buyer_name)}</span><br/>
+              <span style="color:var(--cyan); font-family:'JetBrains Mono',monospace; font-size:10px;">${esc(b.buyer_id)}</span>
+            </td>
+            <td><span class="header-pill" style="color:#fff;">${esc(b.home_wilaya)}</span></td>
+            <td style="color:var(--rose); font-weight:600;">${esc(b.reason)}</td>
+            <td><button type="button" class="action-btn action-approve" data-action="unban" data-buyer-id="${esc(b.buyer_id)}">Unban ✓</button></td>
+          `;
+          tbody.appendChild(tr);
+        });
+        return;
+      }
+
+      thead.innerHTML = `
+        <tr>
+          <th style="width:14%">Time / ID</th>
+          <th style="width:16%">Buyer</th>
+          <th style="width:19%">Item &amp; Amount</th>
+          <th style="width:22%">Route &amp; Kinematics</th>
+          <th style="width:14%">Fraud Prob.</th>
+          <th style="width:15%">Verdict</th>
+        </tr>
+      `;
+
+      const sourceList = activeTab === "review"
+        ? Array.from(pendingReviewMap.values())
+        : allOrders.filter(orderMatchesCurrentView);
+
+      if (sourceList.length === 0) {
+        tbody.innerHTML = `<tr data-empty="1"><td colspan="6" style="text-align:center; padding:20px; color:var(--text-muted);">No orders match this filter.</td></tr>`;
+        return;
+      }
+
+      sourceList.slice(0, 60).forEach(o => {
+        const tr = document.createElement("tr");
+        tr.dataset.orderId = o.order_id;
+        tr.innerHTML = buildOrderRowHtml(o);
+        tbody.appendChild(tr);
+      });
+    }
+
+    function updateKpiDom() {
+      const reviewList = Array.from(pendingReviewMap.values());
+      const reviewDzd = reviewList.reduce((acc, o) => acc + (o.amount_dzd || 0), 0);
+
+      document.getElementById("kpi-orders").textContent = fmtNum(serverStats.processed);
+      document.getElementById("kpi-approved").textContent = fmtDZD(serverStats.approved_dzd);
+      document.getElementById("kpi-approved-usd").textContent = `~$${fmtNum(Math.round(serverStats.approved_dzd / dzdPerUsd))}`;
+      document.getElementById("kpi-prevented").textContent = fmtDZD(serverStats.prevented_dzd);
+      document.getElementById("kpi-prevented-usd").textContent = `~$${fmtNum(Math.round(serverStats.prevented_dzd / dzdPerUsd))} saved`;
+      document.getElementById("kpi-blocked").textContent = fmtNum(serverStats.blocked_count);
+
+      const rate = serverStats.processed > 0
+        ? ((serverStats.blocked_count / serverStats.processed) * 100).toFixed(1)
+        : "0.0";
+      document.getElementById("kpi-attack-rate").textContent = `${rate}% Block Rate`;
+
+      document.getElementById("kpi-banned").textContent = fmtNum(bannedAccounts.size);
+      document.getElementById("kpi-review").textContent = fmtNum(pendingReviewMap.size);
+      document.getElementById("kpi-review-dzd").textContent = `${fmtDZD(reviewDzd)} held`;
+
+      document.getElementById("badge-review").textContent = pendingReviewMap.size;
+      document.getElementById("badge-banned").textContent = bannedAccounts.size;
+
+      document.getElementById("latency-pill").textContent =
+        `avg ${serverStats.avg_latency_ms || 24} ms (p95 ${serverStats.p95_latency_ms || 34} ms)`;
+    }
+
+    function applyOrderToMemory(order, isLive = true) {
+      if (allOrders.some(existing => existing.order_id === order.order_id)) return;
+      allOrders.unshift(order);
+      if (allOrders.length > 200) allOrders.pop();
+
+      if (order.verdict === "NEEDS_REVIEW") {
+        pendingReviewMap.set(order.order_id, order);
+      }
+
+      if (order.verdict === "FRAUD_BLOCKED") {
+        const displayBuyer = order.buyer_name.includes("(")
+          ? order.buyer_name
+          : `${order.buyer_name} (${order.origin.name})`;
+        bannedAccounts.set(order.buyer_id, {
+          buyer_id: order.buyer_id,
+          buyer_name: displayBuyer,
+          reason: order.reason,
+          banned_at: fmtAlgiersTime(order.epoch_ms, order.timestamp),
+          home_wilaya: order.origin.name,
+          trigger_order: order.order_id
+        });
+        if (isLive) triggerIncidentFlash(order);
+      }
+
+      auditLogs.unshift({
+        time: fmtAlgiersTime(order.epoch_ms, order.timestamp),
+        action: order.verdict,
+        detail: `${order.order_id} (${order.buyer_id}) — ${order.reason}`
+      });
+      if (auditLogs.length > 100) auditLogs.pop();
+
+      plotOrderOnMap(order, isLive);
+    }
+
+    function handleIncomingOrder(order) {
+      if (window.SENTINEL_PAUSED) {
+        splashQueue.push(order);
+        return;
+      }
+
+      if (hasLiveBackend) {
+        serverStats.processed += 1;
+        if (order.verdict === "AUTHORIZED") {
+          serverStats.approved_dzd += order.amount_dzd;
+          if (serverStats.per_10s.length) serverStats.per_10s[serverStats.per_10s.length - 1].approved += 1;
+        } else if (order.verdict === "FRAUD_BLOCKED" || order.verdict === "BANNED_RETRY") {
+          serverStats.prevented_dzd += order.amount_dzd;
+          serverStats.blocked_count += 1;
+          if (serverStats.per_10s.length) serverStats.per_10s[serverStats.per_10s.length - 1].blocked += 1;
+          serverStats.by_category[order.category] = (serverStats.by_category[order.category] || 0) + 1;
+          if (order.velocity_kmh > 900 || order.origin.name !== order.destination.name) {
+            const loc = order.destination.name;
+            serverStats.by_origin[loc] = (serverStats.by_origin[loc] || 0) + 1;
+          }
+        } else if (order.verdict === "NEEDS_REVIEW") {
+          if (serverStats.per_10s.length) serverStats.per_10s[serverStats.per_10s.length - 1].review += 1;
+        }
+        if (order.avg_latency_ms != null) serverStats.avg_latency_ms = order.avg_latency_ms;
+        if (order.p95_latency_ms != null) serverStats.p95_latency_ms = order.p95_latency_ms;
+      }
+
+      applyOrderToMemory(order, true);
+      updateKpiDom();
+      syncChartsFromStats();
+
+      if (tableHovered && activeTab === "live") {
+        bufferedOrders.unshift(order);
+        const bp = document.getElementById("buffer-pill");
+        bp.textContent = `⏸ ${bufferedOrders.length} new order${bufferedOrders.length > 1 ? "s" : ""} buffered (move mouse off table)`;
+        bp.style.display = "block";
+      } else {
+        prependSingleOrderRow(order);
+      }
+    }
+
+    function flushHoverBuffer() {
+      if (bufferedOrders.length === 0) return;
+      bufferedOrders.reverse().forEach(o => prependSingleOrderRow(o));
+      bufferedOrders.length = 0;
+      document.getElementById("buffer-pill").style.display = "none";
+    }
+
+    // ===================================================================
+    // 6. ANALYST ACTIONS & FORENSIC CASE FILE MODAL
+    // ===================================================================
+    function headersWithKey() {
+      const h = { "Content-Type": "application/json" };
+      if (presenterKey) h["X-Presenter-Key"] = presenterKey;
+      return h;
+    }
+
+    async function reviewOrder(orderId, decision, btnEl) {
+      const order = pendingReviewMap.get(orderId) || allOrders.find(o => o.order_id === orderId);
+      if (!order || order.verdict !== "NEEDS_REVIEW") return;
+
+      if (btnEl) btnEl.disabled = true;
+
+      if (!hasLiveBackend) {
+        applyBrowserReviewUpdate(order, decision);
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/review/${encodeURIComponent(orderId)}?decision=${encodeURIComponent(decision)}`, {
+          method: "POST",
+          headers: headersWithKey()
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.detail || `HTTP ${res.status}`);
+        }
+      } catch (e) {
+        showToast(`Review failed: ${e.message}`);
+        if (btnEl) btnEl.disabled = false;
+      }
+    }
+
+    function applyBrowserReviewUpdate(order, decision) {
+      pendingReviewMap.delete(order.order_id);
+      if (decision === "approve") {
+        order.verdict = "AUTHORIZED";
+        order.decision_source = "ANALYST";
+        order.reason = "Cleared by SOC Analyst Override";
+        serverStats.approved_dzd += order.amount_dzd;
+      } else {
+        order.verdict = "FRAUD_BLOCKED";
+        order.decision_source = "ANALYST";
+        order.reason = "Confirmed Fraud by SOC Analyst — Account Frozen";
+        serverStats.prevented_dzd += order.amount_dzd;
+        serverStats.blocked_count += 1;
+        serverStats.by_category[order.category] = (serverStats.by_category[order.category] || 0) + 1;
+        bannedAccounts.set(order.buyer_id, {
+          buyer_id: order.buyer_id,
+          buyer_name: `${order.buyer_name} (${order.origin.name})`,
+          reason: order.reason,
+          banned_at: fmtAlgiersTime(Date.now()),
+          home_wilaya: order.origin.name,
+          trigger_order: order.order_id
+        });
+      }
+      saveBrowserState();
+      updateKpiDom();
+      syncChartsFromStats();
+      renderFullTable();
+    }
+
+    async function unbanUser(buyerId, btnEl) {
+      if (!bannedAccounts.has(buyerId)) return;
+      if (btnEl) btnEl.disabled = true;
+
+      if (!hasLiveBackend) {
+        bannedAccounts.delete(buyerId);
+        browserDeclineStreaks.delete(buyerId);
+        saveBrowserState();
+        updateKpiDom();
+        renderFullTable();
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/unban/${encodeURIComponent(buyerId)}`, {
+          method: "POST",
+          headers: headersWithKey()
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.detail || `HTTP ${res.status}`);
+        }
+      } catch (e) {
+        showToast(`Unban failed: ${e.message}`);
+        if (btnEl) btnEl.disabled = false;
+      }
+    }
+
+    function showBannedUserForensics(buyerId) {
+      const banInfo = bannedAccounts.get(buyerId);
+      const userOrders = allOrders.filter(o => o.buyer_id === buyerId);
+      if (userOrders.length > 0) {
+        showForensicsModal(userOrders[0]);
+      } else if (banInfo) {
+        const modalTitle = document.getElementById("modal-title");
+        const modalBody = document.getElementById("modal-body");
+        modalTitle.innerHTML = `Forensic Case File — <span style="color:#fff">${esc(banInfo.buyer_name)}</span> <span style="font-family:'JetBrains Mono',monospace; color:var(--amber);">(${esc(banInfo.buyer_id)})</span>`;
+        modalBody.innerHTML = `
+          <div class="forensic-status-banner frozen">
+            <div>
+              <div style="color:var(--rose); font-weight:900; font-size:13px;">ACCOUNT STATUS: AUTO-FROZEN / BLACKLISTED</div>
+              <div style="color:#fda4af; font-size:11.5px; margin-top:2px;">Trigger: ${esc(banInfo.reason)} (Banned at ${esc(banInfo.banned_at)}, Order ${esc(banInfo.trigger_order)})</div>
+            </div>
+            <button type="button" class="action-btn action-approve" style="padding:6px 12px;" data-modal-unban="${esc(banInfo.buyer_id)}">Unban Account ✓</button>
+          </div>
+          <div style="padding:12px; color:var(--text-muted); background:var(--bg-card); border-radius:8px; border:1px solid var(--border-subtle);">
+            Home Wilaya: <b style="color:#fff">${esc(banInfo.home_wilaya)}</b>. Trigger Order ID: <b style="color:var(--cyan)">${esc(banInfo.trigger_order)}</b>.
+          </div>
+        `;
+        document.getElementById("modal-backdrop").classList.add("open");
+      }
+    }
+
+    function showForensicsModal(order) {
+      const history = allOrders.filter(o => o.buyer_id === order.buyer_id);
+      const isBanned = bannedAccounts.has(order.buyer_id);
+      const banRecord = bannedAccounts.get(order.buyer_id);
+
+      const approvedVol = history.filter(h => h.verdict === "AUTHORIZED").reduce((s, h) => s + h.amount_dzd, 0);
+      const blockedVol = history.filter(h => h.verdict === "FRAUD_BLOCKED" || h.verdict === "BANNED_RETRY").reduce((s, h) => s + h.amount_dzd, 0);
+      const peakVel = history.length ? Math.max(...history.map(h => h.velocity_kmh)) : order.velocity_kmh;
+
+      const curScorePct = Math.max(1, Math.min(99, Math.round((order.model_score ?? order.risk_score ?? 0.06) * 100)));
+      const scoreColor = curScorePct >= 80 ? "var(--rose)" : (curScorePct >= 45 ? "var(--amber)" : "var(--emerald)");
+      const velColor = order.velocity_kmh > 900 ? "var(--rose)" : (order.velocity_kmh > 350 ? "var(--amber)" : "var(--emerald)");
+
+      const modalTitle = document.getElementById("modal-title");
+      const modalBody = document.getElementById("modal-body");
+      modalTitle.innerHTML = `Forensic Case File — <span style="color:#fff">${esc(order.buyer_name)}</span> <span style="font-family:'JetBrains Mono',monospace; color:var(--amber); font-size:12.5px;">(${esc(order.buyer_id)})</span>`;
+
+      const statusBannerHtml = isBanned
+        ? `
+          <div class="forensic-status-banner frozen">
+            <div>
+              <div style="color:var(--rose); font-weight:900; font-size:12.5px;">ACCOUNT STATUS: AUTO-FROZEN / BLACKLISTED</div>
+              <div style="color:#fda4af; font-size:11px; margin-top:2px;">Trigger: ${esc(banRecord.reason)} (at ${esc(banRecord.banned_at)})</div>
+            </div>
+            <button type="button" class="action-btn action-approve" style="padding:6px 12px;" data-modal-unban="${esc(order.buyer_id)}">Unban Account ✓</button>
+          </div>
+        `
+        : `
+          <div class="forensic-status-banner active">
+            <div>
+              <div style="color:var(--emerald); font-weight:900; font-size:12.5px;">ACCOUNT STATUS: ACTIVE STANDING</div>
+              <div style="color:#a7f3d0; font-size:11px; margin-top:2px;">Home Wilaya: ${esc(order.origin.name)}</div>
+            </div>
+            <span class="verdict-pill verdict-${esc(order.verdict)}">${esc(order.verdict.replace("_", " "))}</span>
+          </div>
+        `;
+
+      modalBody.innerHTML = `
+        ${statusBannerHtml}
+
+        <div class="forensic-kpi-row">
+          <div class="forensic-kpi-box">
+            <div class="forensic-kpi-label">Approved Volume</div>
+            <div class="forensic-kpi-val" style="color:var(--emerald)">${fmtDZD(approvedVol)}</div>
+          </div>
+          <div class="forensic-kpi-box">
+            <div class="forensic-kpi-label">Blocked Volume</div>
+            <div class="forensic-kpi-val" style="color:var(--rose)">${fmtDZD(blockedVol)}</div>
+          </div>
+          <div class="forensic-kpi-box">
+            <div class="forensic-kpi-label">Peak Velocity</div>
+            <div class="forensic-kpi-val" style="color:${peakVel > 900 ? 'var(--rose)' : 'var(--cyan)'}">${peakVel} km/h</div>
+          </div>
+          <div class="forensic-kpi-box">
+            <div class="forensic-kpi-label">Fraud Probability</div>
+            <div class="forensic-kpi-val" style="color:${scoreColor}">${curScorePct}%</div>
+          </div>
+        </div>
+
+        <div class="forensic-detail-grid">
+          <div>
+            <div class="forensic-field-label">Order ID &amp; Algiers Time</div>
+            <div class="forensic-field-val">
+              <span style="font-family:'JetBrains Mono',monospace; color:var(--cyan);">${esc(order.order_id)}</span>
+              <span style="color:var(--text-muted); font-size:11.5px;"> • ${esc(fmtAlgiersTime(order.epoch_ms, order.timestamp))}</span>
+            </div>
+          </div>
+          <div>
+            <div class="forensic-field-label">Item &amp; Checkout Value</div>
+            <div class="forensic-field-val">
+              <span style="color:var(--emerald); font-family:'JetBrains Mono',monospace;">${fmtDZD(order.amount_dzd)}</span>
+              <span style="color:var(--text-muted); font-size:11.5px;"> (${esc(order.item)})</span>
+            </div>
+          </div>
+          <div>
+            <div class="forensic-field-label">Geospatial Route</div>
+            <div class="forensic-field-val">
+              <span style="color:#fff;">${esc(order.origin.name)}</span>
+              <span style="color:var(--cyan);"> → </span>
+              <span style="color:var(--amber);">${esc(order.destination.name)}</span>
+            </div>
+          </div>
+          <div>
+            <div class="forensic-field-label">Verified Kinematic Arithmetic</div>
+            <div class="forensic-field-val" style="color:${velColor}; font-family:'JetBrains Mono',monospace;">
+              ${order.distance_km ?? 0} km in ${order.elapsed_min ?? 1} min = ${order.velocity_kmh} km/h
+            </div>
+          </div>
+          <div style="grid-column: span 2;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span class="forensic-field-label">Fraud Probability &amp; Decision Source</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-weight:800; color:${scoreColor};">
+                ${curScorePct}% Fraud Probability • [${esc(order.decision_source || "MODEL")}]
+              </span>
+            </div>
+            <div class="risk-meter-track">
+              <div class="risk-meter-fill" style="width:${curScorePct}%; background:${scoreColor};"></div>
+            </div>
+          </div>
+          <div style="grid-column: span 2; background:rgba(56,189,248,0.07); border:1px solid rgba(56,189,248,0.25); padding:8px 11px; border-radius:7px;">
+            <span class="forensic-field-label" style="color:var(--cyan);">Diagnostic Reason: </span>
+            <span style="color:#fff; font-weight:700; margin-left:5px;">${esc(order.reason)}</span>
+          </div>
+        </div>
+
+        <h4 style="margin-bottom:8px; font-size:11px; text-transform:uppercase; color:var(--text-muted);">
+          Buyer Session Timeline (${Math.max(1, history.length)} Events)
+        </h4>
+        <div class="forensic-history-list">
+          ${(history.length ? history : [order]).map(h => {
+            const hPct = Math.max(1, Math.min(99, Math.round((h.model_score ?? h.risk_score ?? 0.06) * 100)));
+            const hCol = hPct >= 80 ? "var(--rose)" : (hPct >= 45 ? "var(--amber)" : "var(--emerald)");
+            const borderCol = h.verdict === "FRAUD_BLOCKED" || h.verdict === "BANNED_RETRY"
+              ? "var(--rose)"
+              : (h.verdict === "AUTHORIZED" ? "var(--emerald)" : "var(--amber)");
+            const pillLabel = h.verdict === "DECLINED_WARNING"
+              ? `DECLINED (${h.attempt_num}/3)`
+              : (h.verdict === "FRAUD_BLOCKED" && (h.is_declined || String(h.decision_source || "").includes("decline"))
+                ? "BLOCKED (3/3 DECLINES)"
+                : h.verdict.replace("_", " "));
+            return `
+              <div class="forensic-history-item" style="border-left-color:${borderCol}">
+                <div>
+                  <span style="font-family:'JetBrains Mono',monospace; color:var(--text-muted);">${esc(fmtAlgiersTime(h.epoch_ms, h.timestamp))}</span>
+                  <span style="font-family:'JetBrains Mono',monospace; color:var(--cyan); font-weight:700; margin-left:6px;">${esc(h.order_id)}</span>
+                  <span style="color:#fff; font-weight:600; margin-left:8px;">${esc(h.origin.name)} → ${esc(h.destination.name)}</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-family:'JetBrains Mono',monospace; color:var(--emerald); font-weight:700;">${fmtDZD(h.amount_dzd)}</span>
+                  <span style="font-family:'JetBrains Mono',monospace; color:${h.velocity_kmh > 900 ? 'var(--rose)' : 'var(--text-muted)'};">${h.distance_km ?? 0}km/${h.elapsed_min ?? 1}m (${h.velocity_kmh} km/h)</span>
+                  <span style="font-family:'JetBrains Mono',monospace; font-weight:800; color:${hCol};">${hPct}%</span>
+                  <span class="verdict-pill verdict-${esc(h.verdict)}">${esc(pillLabel)}</span>
+                </div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      `;
+      document.getElementById("modal-backdrop").classList.add("open");
+    }
+
+    function closeModal() {
+      document.getElementById("modal-backdrop").classList.remove("open");
+    }
+
+    // ===================================================================
+    // 7. LIVE BACKEND STREAM OR AUTONOMOUS BROWSER ENGINE
+    // ===================================================================
+    let eventSource = null;
+
+    async function fetchAndRebuildState() {
+      try {
+        const res = await fetch("/api/state", { cache: "no-store" });
+        if (!res.ok) throw new Error("No backend API");
+        const data = await res.json();
+
+        hasLiveBackend = true;
+        allOrders.length = 0;
+        bannedAccounts.clear();
+        pendingReviewMap.clear();
+        auditLogs.length = 0;
+        if (markersLayer) markersLayer.clearLayers();
+        markerQueue.length = 0;
+
+        dzdPerUsd = data.config?.dzd_per_usd || 135;
+        document.getElementById("wilayas-pill").textContent = `${data.config?.wilayas_monitored || 58} Wilayas Monitored`;
+        document.getElementById("kpi-wilayas-sub").textContent = `${data.config?.wilayas_monitored || 58} Wilayas`;
+        document.getElementById("model-pill").textContent = data.model_status || "Neural + Kinematic Engine";
+
+        serverStats = data.stats || serverStats;
+        demoPaused = Boolean(data.demo_paused);
+        currentSpeedSec = data.speed_sec || 2.5;
+        updatePauseResumeButton();
+
+        (data.banned || []).forEach(b => bannedAccounts.set(b.buyer_id, b));
+        (data.pending_review || []).forEach(o => pendingReviewMap.set(o.order_id, o));
+        (data.audit || []).forEach(a => auditLogs.push(a));
+
+        const reversed = (data.orders || []).slice().reverse();
+        reversed.forEach(o => applyOrderToMemory(o, false));
+
+        updateKpiDom();
+        syncChartsFromStats();
+        renderFullTable();
+        return true;
+      } catch (err) {
+        return false;
+      }
+    }
+
+    function connectBackendStream() {
+      if (eventSource) eventSource.close();
+      eventSource = new EventSource("/stream");
+
+      eventSource.onopen = async () => {
+        document.getElementById("status-dot").className = "status-dot";
+        document.getElementById("status-text").textContent = "LIVE";
+        await fetchAndRebuildState();
+      };
+
+      eventSource.onmessage = e => {
+        try {
+          const msg = JSON.parse(e.data);
+          if (msg.type === "order") {
+            handleIncomingOrder(msg.payload);
+          } else if (msg.type === "stats") {
+            if (msg.payload.stats) serverStats = msg.payload.stats;
+            updateKpiDom();
+            syncChartsFromStats();
+          } else if (msg.type === "review_update") {
+            const upd = msg.payload.order;
+            pendingReviewMap.delete(upd.order_id);
+            const idx = allOrders.findIndex(o => o.order_id === upd.order_id);
+            if (idx !== -1) allOrders[idx] = upd;
+            if (msg.payload.stats) serverStats = msg.payload.stats;
+            if (msg.payload.banned) {
+              bannedAccounts.clear();
+              msg.payload.banned.forEach(b => bannedAccounts.set(b.buyer_id, b));
+            }
+            updateKpiDom();
+            syncChartsFromStats();
+            renderFullTable();
+          } else if (msg.type === "unban") {
+            bannedAccounts.delete(msg.payload.buyer_id);
+            updateKpiDom();
+            renderFullTable();
+          } else if (msg.type === "reset") {
+            fetchAndRebuildState();
+          } else if (msg.type === "demo_status") {
+            demoPaused = msg.payload.demo_paused;
+            currentSpeedSec = msg.payload.speed_sec;
+            updatePauseResumeButton();
+          }
+        } catch (err) {}
+      };
+    }
+
+    // ===================================================================
+    // 8. FULL 58-WILAYA IN-BROWSER NEURAL-LOGISTIC ENGINE (WITH 1/3 -> 2/3 -> 3/3)
+    // ===================================================================
+    const ALL_58_WILAYAS = [
+      { code: 1, name: "Adrar", lat: 27.8742, lon: -0.2939 }, { code: 2, name: "Chlef", lat: 36.1652, lon: 1.3345 },
+      { code: 3, name: "Laghouat", lat: 33.8000, lon: 2.8651 }, { code: 4, name: "Oum El Bouaghi", lat: 35.8754, lon: 7.1135 },
+      { code: 5, name: "Batna", lat: 35.5559, lon: 6.1741 }, { code: 6, name: "Béjaïa", lat: 36.7525, lon: 5.0556 },
+      { code: 7, name: "Biskra", lat: 34.8480, lon: 5.7281 }, { code: 8, name: "Béchar", lat: 31.6167, lon: -2.2167 },
+      { code: 9, name: "Blida", lat: 36.4700, lon: 2.8300 }, { code: 10, name: "Bouira", lat: 36.3749, lon: 3.9020 },
+      { code: 11, name: "Tamanrasset", lat: 22.7850, lon: 5.5228 }, { code: 12, name: "Tébessa", lat: 35.4042, lon: 8.1242 },
+      { code: 13, name: "Tlemcen", lat: 34.8783, lon: -1.3150 }, { code: 14, name: "Tiaret", lat: 35.3710, lon: 1.3170 },
+      { code: 15, name: "Tizi Ouzou", lat: 36.7118, lon: 4.0459 }, { code: 16, name: "Algiers", lat: 36.7538, lon: 3.0588 },
+      { code: 17, name: "Djelfa", lat: 34.6728, lon: 3.2630 }, { code: 18, name: "Jijel", lat: 36.8205, lon: 5.7667 },
+      { code: 19, name: "Sétif", lat: 36.1911, lon: 5.4137 }, { code: 20, name: "Saïda", lat: 34.8303, lon: 0.1517 },
+      { code: 21, name: "Skikda", lat: 36.8764, lon: 6.9092 }, { code: 22, name: "Sidi Bel Abbès", lat: 35.1899, lon: -0.6308 },
+      { code: 23, name: "Annaba", lat: 36.9000, lon: 7.7667 }, { code: 24, name: "Guelma", lat: 36.4621, lon: 7.4261 },
+      { code: 25, name: "Constantine", lat: 36.3650, lon: 6.6147 }, { code: 26, name: "Médéa", lat: 36.2642, lon: 2.7539 },
+      { code: 27, name: "Mostaganem", lat: 35.9311, lon: 0.0892 }, { code: 28, name: "M'Sila", lat: 35.7058, lon: 4.5419 },
+      { code: 29, name: "Mascara", lat: 35.3966, lon: 0.1403 }, { code: 30, name: "Ouargla", lat: 31.9493, lon: 5.3250 },
+      { code: 31, name: "Oran", lat: 35.6987, lon: -0.6349 }, { code: 32, name: "El Bayadh", lat: 33.6832, lon: 1.0193 },
+      { code: 33, name: "Illizi", lat: 26.4833, lon: 8.4667 }, { code: 34, name: "Bordj Bou Arréridj", lat: 36.0732, lon: 4.7611 },
+      { code: 35, name: "Boumerdès", lat: 36.7664, lon: 3.4772 }, { code: 36, name: "El Tarf", lat: 36.7672, lon: 8.3138 },
+      { code: 37, name: "Tindouf", lat: 27.6711, lon: -8.1474 }, { code: 38, name: "Tissemsilt", lat: 35.6072, lon: 1.8108 },
+      { code: 39, name: "El Oued", lat: 33.3561, lon: 6.8631 }, { code: 40, name: "Khenchela", lat: 35.4358, lon: 7.1433 },
+      { code: 41, name: "Souk Ahras", lat: 36.2864, lon: 7.9511 }, { code: 42, name: "Tipaza", lat: 36.5897, lon: 2.4475 },
+      { code: 43, name: "Mila", lat: 36.4503, lon: 6.2644 }, { code: 44, name: "Aïn Defla", lat: 36.2641, lon: 1.9679 },
+      { code: 45, name: "Naâma", lat: 33.2667, lon: -0.3167 }, { code: 46, name: "Aïn Témouchent", lat: 35.2975, lon: -1.1404 },
+      { code: 47, name: "Ghardaïa", lat: 32.4909, lon: 3.6735 }, { code: 48, name: "Relizane", lat: 35.7373, lon: 0.5560 },
+      { code: 49, name: "Timimoun", lat: 29.2639, lon: 0.2309 }, { code: 50, name: "Bordj Badji Mokhtar", lat: 21.3278, lon: 0.9542 },
+      { code: 51, name: "Ouled Djellal", lat: 34.4333, lon: 5.0667 }, { code: 52, name: "Béni Abbès", lat: 30.1333, lon: -2.1667 },
+      { code: 53, name: "In Salah", lat: 27.1935, lon: 2.4607 }, { code: 54, name: "In Guezzam", lat: 19.5686, lon: 5.7722 },
+      { code: 55, name: "Touggourt", lat: 33.1053, lon: 6.0580 }, { code: 56, name: "Djanet", lat: 24.5542, lon: 9.4844 },
+      { code: 57, name: "El M'Ghair", lat: 33.9500, lon: 5.9242 }, { code: 58, name: "El Meniaa", lat: 30.5833, lon: 2.8833 }
+    ];
+
+    const BROWSER_NAMES = [
+      "Amine B.", "Yasmine K.", "Karim M.", "Meriem S.", "Walid T.", "Nadia H.", "Sofiane R.", "Lina A.",
+      "Mehdi Z.", "Sarah D.", "Riad C.", "Farah L.", "Youcef G.", "Ines O.", "Adel N.", "Khadidja B.",
+      "Hamza F.", "Chaima E.", "Tarek J.", "Nour M.", "Anis K.", "Manel B.", "Bilal S.", "Sami R.",
+      "Imane T.", "Lotfi D.", "Ikram M.", "Mourad H.", "Amina C.", "Hichem G.", "Salima N.", "Reda A.",
+      "Nesrine F.", "Hakim Z.", "Djamila O.", "Fares B.", "Lynda K.", "Nabil S.", "Souad M.", "Yacine T.",
+      "Sabrina L.", "Djamel R.", "Asma H.", "Malik D.", "Rania C.", "Raouf B.", "Sihem G.", "Idris N.",
+      "Selma A.", "Racim F.", "Kenza Z.", "Wassim M.", "Maya T.", "Fouad K.", "Lamia S.", "Zakaria H.",
+      "Hiba R.", "Ilias D.", "Amel B."
+    ];
+
+    const BROWSER_BUYERS = BROWSER_NAMES.map((name, i) => ({
+      id: `DZ-USR-${1001 + i}`,
+      name: name,
+      home: ALL_58_WILAYAS[i % ALL_58_WILAYAS.length]
+    }));
+
+    const BROWSER_CATALOG = [
+      { c: "Electronics", items: ["MSI RTX 4070 Laptop", "Samsung S24 Ultra", "iPad Pro 13\" M4", "PS5 Slim Console", "MacBook Air M3"], min: 45000, max: 220000 },
+      { c: "Home Appliances", items: ["De'Longhi Espresso", "Samsung QLED 55\" TV", "Roborock S8 Vacuum", "Midea Inverter AC", "Dyson V15 Detect"], min: 18000, max: 112000 },
+      { c: "Jewelry & Watches", items: ["Tissot PRX Watch", "18K Gold Kabyle Fibula", "Seiko Presage Auto", "Certina DS Action"], min: 28000, max: 155000 },
+      { c: "Fashion & Clothing", items: ["Atlas Leather Jacket", "Nike Air Zoom Pegasus", "Cashmere Winter Coat", "Ray-Ban Aviator"], min: 7500, max: 46000 },
+      { c: "Mobile & Recharge", items: ["Mobilis 20,000 DZD Top-Up", "Djezzy Annual Pass", "Ooredoo Fiber Pack", "5G Router CPE Pro"], min: 4500, max: 62000 },
+      { c: "Groceries / Superette", items: ["Kabyle Olive Oil 5L", "Deglet Nour Dates 5kg", "Family Pantry Box", "Mountain Honey 1kg"], min: 2500, max: 16500 }
+    ];
+
+    const BROWSER_FOREIGN = [
+      { name: "Paris, FR", lat: 48.8566, lon: 2.3522 },
+      { name: "London, UK", lat: 51.5074, lon: -0.1278 },
+      { name: "Frankfurt, DE", lat: 50.1109, lon: 8.6821 },
+      { name: "Istanbul, TR", lat: 41.0082, lon: 28.9784 },
+      { name: "Madrid, ES", lat: 40.4168, lon: -3.7038 }
+    ];
+
+    let browserSeq = 104200;
+    const browserDeclineStreaks = new Map(); // buyer_id -> 1 or 2
+
+    function haversineJs(lat1, lon1, lat2, lon2) {
+      const R = 6371.0;
+      const toRad = d => (d * Math.PI) / 180.0;
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+      return 2 * R * Math.asin(Math.sqrt(Math.max(0, Math.min(1, a))));
+    }
+
+    function computeNeuralLogisticScore(amountDzd, velocityKmh, attemptNum, isDeclined) {
+      let z = -3.45;
+      z += (velocityKmh / 900.0) * 2.95;
+      z += (amountDzd / 145000.0) * 1.05;
+      z += (attemptNum - 1) * 1.25;
+      z += isDeclined * 1.50;
+      const prob = 1.0 / (1.0 + Math.exp(-Math.max(-15.0, Math.min(15.0, z))));
+      return +Math.max(0.01, Math.min(0.99, prob)).toFixed(4);
+    }
+
+    function saveBrowserState() {
+      if (hasLiveBackend) return;
+      try {
+        sessionStorage.setItem("SENTINEL_LIVE_STATE", JSON.stringify({
+          browserSeq,
+          serverStats,
+          orders: allOrders.slice(0, 80),
+          banned: Array.from(bannedAccounts.values()),
+          pending: Array.from(pendingReviewMap.values())
+        }));
+      } catch (e) {}
+    }
+
+    function loadBrowserState() {
+      try {
+        const raw = sessionStorage.getItem("SENTINEL_LIVE_STATE");
+        if (!raw) return false;
+        const parsed = JSON.parse(raw);
+        browserSeq = parsed.browserSeq || 104200;
+        serverStats = parsed.serverStats || serverStats;
+        (parsed.banned || []).forEach(b => bannedAccounts.set(b.buyer_id, b));
+        (parsed.pending || []).forEach(o => pendingReviewMap.set(o.order_id, o));
+        (parsed.orders || []).slice().reverse().forEach(o => applyOrderToMemory(o, false));
+        updateKpiDom();
+        syncChartsFromStats();
+        renderFullTable();
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function generateBrowserOrder(forcedMode = null) {
+      if (bannedAccounts.size > 12) {
+        const oldestKey = bannedAccounts.keys().next().value;
+        bannedAccounts.delete(oldestKey);
+        browserDeclineStreaks.delete(oldestKey);
+      }
+
+      browserSeq++;
+      const oid = `ORD-DZ-${browserSeq}`;
+      const epochMs = Date.now();
+      const nowStr = fmtAlgiersTime(epochMs);
+
+      const activePool = BROWSER_BUYERS.filter(b => !bannedAccounts.has(b.id));
+      const ongoingDeclineBuyer = activePool.find(b => {
+        const s = browserDeclineStreaks.get(b.id) || 0;
+        return s >= 1 && s < 3;
+      });
+
+      let mode = forcedMode;
+      if (!mode) {
+        if (ongoingDeclineBuyer && Math.random() < 0.70) {
+          mode = "card_decline";
+        } else {
+          const r = Math.random();
+          if (r < 0.10) mode = "impossible_travel";
+          else if (r < 0.18) mode = "card_decline";
+          else if (r < 0.36) mode = "needs_review";
+          else if (r < 0.39 && bannedAccounts.size > 0) mode = "banned_retry";
+          else mode = "legit";
+        }
+      }
+
+      const highTicketPool = BROWSER_CATALOG.filter(c => c.max >= 55000);
+      const catGroup = mode === "impossible_travel"
+        ? highTicketPool[Math.floor(Math.random() * highTicketPool.length)]
+        : BROWSER_CATALOG[Math.floor(Math.random() * BROWSER_CATALOG.length)];
+      const item = catGroup.items[Math.floor(Math.random() * catGroup.items.length)];
+      const latencyMs = +(19.0 + Math.random() * 14.0).toFixed(1);
+
+      if (mode === "banned_retry" && bannedAccounts.size > 0) {
+        const bannedArr = Array.from(bannedAccounts.values());
+        const b = bannedArr[Math.floor(Math.random() * bannedArr.length)];
+        const w = ALL_58_WILAYAS.find(x => x.name === b.home_wilaya) || ALL_58_WILAYAS[15];
+        const amt = Math.floor(catGroup.min + Math.random() * (catGroup.max - catGroup.min));
+        return {
+          order_id: oid, epoch_ms: epochMs, timestamp: nowStr,
+          buyer_id: b.buyer_id, buyer_name: b.buyer_name,
+          item, category: catGroup.c, amount_dzd: amt,
+          origin: { name: w.name, lat: w.lat, lon: w.lon },
+          destination: { name: w.name, lat: w.lat, lon: w.lon },
+          distance_km: 0.0, elapsed_min: 1, velocity_kmh: 0.0,
+          attempt_num: 3, is_declined: 1, model_score: 0.99, risk_score: 0.99,
+          decision_source: "GATEWAY: blacklist", verdict: "BANNED_RETRY",
+          reason: "Gateway Policy: Frozen Account Checkout Attempt Rejected", latency_ms: latencyMs
+        };
+      }
+
+      const buyer = (mode === "card_decline" && ongoingDeclineBuyer)
+        ? ongoingDeclineBuyer
+        : activePool[Math.floor(Math.random() * activePool.length)];
+      const origLat = +(buyer.home.lat + (Math.random() - 0.5) * 0.08).toFixed(4);
+      const origLon = +(buyer.home.lon + (Math.random() - 0.5) * 0.08).toFixed(4);
+
+      if (mode === "impossible_travel") {
+        const ext = BROWSER_FOREIGN[Math.floor(Math.random() * BROWSER_FOREIGN.length)];
+        const destLat = +(ext.lat + (Math.random() - 0.5) * 0.08).toFixed(4);
+        const destLon = +(ext.lon + (Math.random() - 0.5) * 0.08).toFixed(4);
+        const distKm = +haversineJs(origLat, origLon, destLat, destLon).toFixed(1);
+        const elapsedMin = Math.floor(10 + Math.random() * 12);
+        const velKmh = +(distKm / (elapsedMin / 60)).toFixed(1);
+        const lo = Math.min(55000, Math.floor(catGroup.max * 0.8));
+        const amt = Math.floor(lo + Math.random() * (catGroup.max - lo));
+        const score = Math.max(0.89, computeNeuralLogisticScore(amt, velKmh, 1, 0));
+        return {
+          order_id: oid, epoch_ms: epochMs, timestamp: nowStr,
+          buyer_id: buyer.id, buyer_name: buyer.name, item, category: catGroup.c, amount_dzd: amt,
+          origin: { name: buyer.home.name, lat: origLat, lon: origLon },
+          destination: { name: ext.name, lat: destLat, lon: destLon },
+          distance_km: distKm, elapsed_min: elapsedMin, velocity_kmh: velKmh,
+          attempt_num: 1, is_declined: 0, model_score: score, risk_score: score,
+          decision_source: "RULE: impossible travel > 900 km/h", verdict: "FRAUD_BLOCKED",
+          reason: `Impossible Travel (${distKm} km in ${elapsedMin} min = ${velKmh} km/h)`, latency_ms: latencyMs
+        };
+      } else if (mode === "needs_review") {
+        const other = ALL_58_WILAYAS[(buyer.home.code + 14) % ALL_58_WILAYAS.length];
+        const destLat = +(other.lat + (Math.random() - 0.5) * 0.08).toFixed(4);
+        const destLon = +(other.lon + (Math.random() - 0.5) * 0.08).toFixed(4);
+        const distKm = +haversineJs(origLat, origLon, destLat, destLon).toFixed(1);
+        const elapsedMin = Math.max(18, Math.round((distKm / (480 + Math.random() * 240)) * 60));
+        const velKmh = +(distKm / (elapsedMin / 60)).toFixed(1);
+        const amt = Math.floor(38000 + Math.random() * 75000);
+        const score = +(0.54 + Math.random() * 0.24).toFixed(2);
+        return {
+          order_id: oid, epoch_ms: epochMs, timestamp: nowStr,
+          buyer_id: buyer.id, buyer_name: buyer.name, item, category: catGroup.c, amount_dzd: amt,
+          origin: { name: buyer.home.name, lat: origLat, lon: origLon },
+          destination: { name: other.name, lat: destLat, lon: destLon },
+          distance_km: distKm, elapsed_min: elapsedMin, velocity_kmh: velKmh,
+          attempt_num: 2, is_declined: 0, model_score: score, risk_score: score,
+          decision_source: "MODEL + VELOCITY", verdict: "NEEDS_REVIEW",
+          reason: `Unusual Route (${distKm} km in ${elapsedMin} min = ${velKmh} km/h) — Held for Review`, latency_ms: latencyMs
+        };
+      } else if (mode === "card_decline") {
+        // Step sequentially through 1/3 -> 2/3 -> 3/3 (Blocked)!
+        const step = (browserDeclineStreaks.get(buyer.id) || 0) + 1;
+        const distKm = +(2.5 + Math.random() * 6).toFixed(1);
+        const elapsedMin = 15;
+        const velKmh = +(distKm / (elapsedMin / 60)).toFixed(1);
+        const amt = Math.floor(catGroup.min + Math.random() * (catGroup.max - catGroup.min));
+
+        if (step < 3) {
+          browserDeclineStreaks.set(buyer.id, step);
+          const score = +(0.38 + step * 0.18).toFixed(2);
+          return {
+            order_id: oid, epoch_ms: epochMs, timestamp: nowStr,
+            buyer_id: buyer.id, buyer_name: buyer.name, item, category: catGroup.c, amount_dzd: amt,
+            origin: { name: buyer.home.name, lat: origLat, lon: origLon },
+            destination: { name: buyer.home.name, lat: origLat, lon: origLon },
+            distance_km: distKm, elapsed_min: elapsedMin, velocity_kmh: velKmh,
+            attempt_num: step, is_declined: 1, model_score: score, risk_score: score,
+            decision_source: `RULE: card decline (${step}/3)`, verdict: "DECLINED_WARNING",
+            reason: `Card Declined (${step}/3) — Suspected Stolen/Generated Card Testing`, latency_ms: latencyMs
+          };
+        } else {
+          browserDeclineStreaks.delete(buyer.id);
+          const score = 0.97;
+          return {
+            order_id: oid, epoch_ms: epochMs, timestamp: nowStr,
+            buyer_id: buyer.id, buyer_name: buyer.name, item, category: catGroup.c, amount_dzd: amt,
+            origin: { name: buyer.home.name, lat: origLat, lon: origLon },
+            destination: { name: buyer.home.name, lat: origLat, lon: origLon },
+            distance_km: distKm, elapsed_min: elapsedMin, velocity_kmh: velKmh,
+            attempt_num: 3, is_declined: 1, model_score: score, risk_score: score,
+            decision_source: "RULE: 3/3 declines (card testing)", verdict: "FRAUD_BLOCKED",
+            reason: "Blocked: Too Many Attempts (3/3 Declines) — Suspected Stolen or Generated Card Numbers — Account Auto-Frozen",
+            latency_ms: latencyMs
+          };
+        }
+      } else {
+        const distKm = +(1.2 + Math.random() * 9).toFixed(1);
+        const elapsedMin = Math.floor(20 + Math.random() * 40);
+        const velKmh = +(distKm / (elapsedMin / 60)).toFixed(1);
+        const amt = Math.floor(catGroup.min + Math.random() * Math.min(35000, catGroup.max - catGroup.min));
+        const score = computeNeuralLogisticScore(amt, velKmh, 1, 0);
+        return {
+          order_id: oid, epoch_ms: epochMs, timestamp: nowStr,
+          buyer_id: buyer.id, buyer_name: buyer.name, item, category: catGroup.c, amount_dzd: amt,
+          origin: { name: buyer.home.name, lat: origLat, lon: origLon },
+          destination: { name: buyer.home.name, lat: origLat, lon: origLon },
+          distance_km: distKm, elapsed_min: elapsedMin, velocity_kmh: velKmh,
+          attempt_num: 1, is_declined: 0, model_score: score, risk_score: score,
+          decision_source: "MODEL", verdict: "AUTHORIZED",
+          reason: `Verified Domestic Checkout (${distKm} km in ${elapsedMin} min)`, latency_ms: latencyMs
+        };
+      }
+    }
+
+    function recordBrowserStats(order) {
+      serverStats.processed += 1;
+      if (order.verdict === "AUTHORIZED") {
+        serverStats.approved_dzd += order.amount_dzd;
+        serverStats.per_10s[serverStats.per_10s.length - 1].approved += 1;
+      } else if (order.verdict === "FRAUD_BLOCKED" || order.verdict === "BANNED_RETRY") {
+        serverStats.prevented_dzd += order.amount_dzd;
+        serverStats.blocked_count += 1;
+        serverStats.per_10s[serverStats.per_10s.length - 1].blocked += 1;
+        serverStats.by_category[order.category] = (serverStats.by_category[order.category] || 0) + 1;
+        if (order.velocity_kmh > 900) {
+          const loc = order.destination.name;
+          serverStats.by_origin[loc] = (serverStats.by_origin[loc] || 0) + 1;
+        }
+      } else if (order.verdict === "NEEDS_REVIEW") {
+        serverStats.per_10s[serverStats.per_10s.length - 1].review += 1;
+      }
+      serverStats.avg_latency_ms = +(22.5 + Math.random() * 3.5).toFixed(1);
+      serverStats.p95_latency_ms = 34.2;
+    }
+
+    function startAutonomousBrowserEngine() {
+      document.getElementById("status-dot").className = "status-dot";
+      document.getElementById("status-text").textContent = "LIVE";
+      document.getElementById("model-pill").textContent = "Neural + Kinematic Engine";
+      document.getElementById("model-pill").style.color = "var(--emerald)";
+      document.getElementById("wilayas-pill").textContent = "58 Wilayas Monitored";
+
+      if (!serverStats.per_10s.length) {
+        for (let i = 5; i >= 0; i--) {
+          serverStats.per_10s.push({
+            label: fmtAlgiersTime(Date.now() - i * 10000),
+            approved: 0, blocked: 0, review: 0
+          });
+        }
+      }
+
+      loadBrowserState();
+
+      setInterval(() => {
+        if (window.SENTINEL_PAUSED || demoPaused || hasLiveBackend) return;
+        const o = generateBrowserOrder();
+        recordBrowserStats(o);
+        handleIncomingOrder(o);
+        saveBrowserState();
+      }, 2500);
+
+      setInterval(() => {
+        if (window.SENTINEL_PAUSED || demoPaused || hasLiveBackend) return;
+        serverStats.per_10s.push({ label: fmtAlgiersTime(Date.now()), approved: 0, blocked: 0, review: 0 });
+        if (serverStats.per_10s.length > 6) serverStats.per_10s.shift();
+        syncChartsFromStats();
+      }, 10000);
+    }
+
+    (async function boot() {
+      const ok = await fetchAndRebuildState();
+      if (ok) {
+        connectBackendStream();
+      } else {
+        startAutonomousBrowserEngine();
+      }
+    })();
+
+    // ===================================================================
+    // 9. DELEGATED EVENT LISTENERS, SCENARIOS & KEYBOARD SHORTCUTS
+    // ===================================================================
+    const tbodyEl = document.getElementById("ops-tbody");
+
+    tbodyEl.addEventListener("mouseenter", () => { tableHovered = true; });
+    tbodyEl.addEventListener("mouseleave", () => {
+      tableHovered = false;
+      flushHoverBuffer();
+    });
+    document.getElementById("buffer-pill").addEventListener("click", () => {
+      tableHovered = false;
+      flushHoverBuffer();
+    });
+
+    tbodyEl.addEventListener("click", e => {
+      const actionBtn = e.target.closest("button[data-action]");
+      if (actionBtn) {
+        e.stopPropagation();
+        const act = actionBtn.dataset.action;
+        if (act === "approve" || act === "block") {
+          reviewOrder(actionBtn.dataset.orderId, act, actionBtn);
+        } else if (act === "unban") {
+          unbanUser(actionBtn.dataset.buyerId, actionBtn);
+        }
+        return;
+      }
+
+      const row = e.target.closest("tr");
+      if (!row) return;
+      if (row.dataset.orderId) {
+        const order = allOrders.find(o => o.order_id === row.dataset.orderId) || pendingReviewMap.get(row.dataset.orderId);
+        if (order) showForensicsModal(order);
+      } else if (row.dataset.buyerId) {
+        showBannedUserForensics(row.dataset.buyerId);
+      }
+    });
+
+    document.getElementById("modal-body").addEventListener("click", e => {
+      const unbanBtn = e.target.closest("button[data-modal-unban]");
+      if (unbanBtn) {
+        unbanUser(unbanBtn.dataset.modalUnban, unbanBtn);
+        closeModal();
+      }
+    });
+
+    document.querySelectorAll(".ops-tab").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".ops-tab").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        activeTab = btn.dataset.tab;
+        flushHoverBuffer();
+        renderFullTable();
+      });
+    });
+
+    document.querySelectorAll(".filter-pill").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".filter-pill").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        activeFilter = btn.dataset.filter;
+        flushHoverBuffer();
+        renderFullTable();
+      });
+    });
+
+    document.getElementById("search-box").addEventListener("input", e => {
+      searchQuery = e.target.value.trim();
+      renderFullTable();
+    });
+
+    document.querySelectorAll("button[data-scenario]").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        ensureAudioCtx();
+        window.SENTINEL_PAUSED = false;
+        const scenario = btn.dataset.scenario;
+        const allScenarioBtns = document.querySelectorAll("button[data-scenario]");
+        allScenarioBtns.forEach(b => { b.disabled = true; });
+        setTimeout(() => allScenarioBtns.forEach(b => { b.disabled = false; }), 2500);
+
+        if (!hasLiveBackend) {
+          if (scenario === "card_decline") {
+            const activePool = BROWSER_BUYERS.filter(b => !bannedAccounts.has(b.id));
+            const target = activePool[Math.floor(Math.random() * activePool.length)];
+            browserDeclineStreaks.delete(target.id);
+            [1, 2, 3].forEach((step, idx) => {
+              setTimeout(() => {
+                browserSeq++;
+                const score = step < 3 ? +(0.38 + step * 0.18).toFixed(2) : 0.97;
+                const o = {
+                  order_id: `ORD-DZ-${browserSeq}`, epoch_ms: Date.now(), timestamp: fmtAlgiersTime(Date.now()),
+                  buyer_id: target.id, buyer_name: target.name, item: "Mobilis 20,000 DZD Top-Up", category: "Mobile & Recharge",
+                  amount_dzd: 38000, origin: target.home, destination: target.home,
+                  distance_km: 3.2, elapsed_min: 12, velocity_kmh: 16.0, attempt_num: step, is_declined: 1,
+                  model_score: score, risk_score: score,
+                  decision_source: step < 3 ? `RULE: card decline (${step}/3)` : "RULE: 3/3 declines (card testing)",
+                  verdict: step < 3 ? "DECLINED_WARNING" : "FRAUD_BLOCKED",
+                  reason: step < 3
+                    ? `Card Declined (${step}/3) — Suspected Stolen/Generated Card Testing`
+                    : "Blocked: Too Many Attempts (3/3 Declines) — Suspected Stolen or Generated Card Numbers — Account Auto-Frozen",
+                  latency_ms: 21.4
+                };
+                recordBrowserStats(o);
+                handleIncomingOrder(o);
+                saveBrowserState();
+              }, idx * 600);
+            });
+          } else {
+            const o = generateBrowserOrder(scenario);
+            recordBrowserStats(o);
+            handleIncomingOrder(o);
+            saveBrowserState();
+          }
+          return;
+        }
+
+        try {
+          const res = await fetch(`/api/simulate/${encodeURIComponent(scenario)}`, {
+            method: "POST",
+            headers: headersWithKey()
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        } catch (err) {
+          showToast(`Scenario trigger failed: ${err.message}`);
+        }
+      });
+    });
+
+    function updatePauseResumeButton() {
+      const btn = document.getElementById("btn-pause-resume");
+      if (btn) btn.textContent = demoPaused ? "▶ Resume" : "⏸ Pause";
+    }
+
+    document.getElementById("btn-pause-resume").addEventListener("click", async () => {
+      if (!hasLiveBackend) {
+        demoPaused = !demoPaused;
+        updatePauseResumeButton();
+        return;
+      }
+      const endpoint = demoPaused ? "/api/demo/resume" : "/api/demo/pause";
+      await fetch(endpoint, { method: "POST", headers: headersWithKey() }).catch(() => {});
+    });
+
+    const SPEED_CYCLE = [
+      { label: "Speed: Normal (2.5s)", sec: 2.5 },
+      { label: "Speed: Fast (1.0s)", sec: 1.0 },
+      { label: "Speed: Slow (5.5s)", sec: 5.5 }
+    ];
+    let speedIdx = 0;
+
+    document.getElementById("btn-speed").addEventListener("click", async e => {
+      speedIdx = (speedIdx + 1) % SPEED_CYCLE.length;
+      const picked = SPEED_CYCLE[speedIdx];
+      e.currentTarget.textContent = picked.label;
+      if (hasLiveBackend) {
+        await fetch(`/api/demo/speed?sec=${picked.sec}`, { method: "POST", headers: headersWithKey() }).catch(() => {});
+      }
+    });
+
+    document.getElementById("btn-reset-demo").addEventListener("click", async () => {
+      if (!hasLiveBackend) {
+        try { sessionStorage.removeItem("SENTINEL_LIVE_STATE"); } catch (e) {}
+        window.location.reload();
+        return;
+      }
+      await fetch("/api/demo/reset", { method: "POST", headers: headersWithKey() }).catch(() => {});
+    });
+
+    document.getElementById("btn-presenter").addEventListener("click", () => {
+      document.getElementById("presenter-deck").classList.toggle("open");
+    });
+    document.getElementById("shield-trigger").addEventListener("click", () => {
+      document.getElementById("presenter-deck").classList.toggle("open");
+    });
+    document.getElementById("btn-close-deck").addEventListener("click", () => {
+      document.getElementById("presenter-deck").classList.remove("open");
+    });
+
+    document.getElementById("btn-projector").addEventListener("click", e => {
+      document.body.classList.toggle("projector-mode");
+      e.currentTarget.classList.toggle("active");
+      setTimeout(() => { if (map) map.invalidateSize(); }, 100);
+    });
+
+    document.getElementById("btn-mute").addEventListener("click", e => {
+      ensureAudioCtx();
+      audioMuted = !audioMuted;
+      e.currentTarget.textContent = audioMuted ? "Audio: OFF (M)" : "Audio: ON (M)";
+      e.currentTarget.classList.toggle("active", !audioMuted);
+    });
+
+    document.getElementById("btn-fullscreen").addEventListener("click", () => {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+      else document.exitFullscreen().catch(() => {});
+    });
+
+    document.getElementById("btn-audit").addEventListener("click", () => {
+      document.getElementById("modal-title").textContent = "SOC System Audit Log (Last 100 Events)";
+      document.getElementById("modal-body").innerHTML = auditLogs.length
+        ? `<div class="forensic-history-list">` + auditLogs.slice(0, 100).map(a => {
+            const col = a.action.includes("FRAUD") || a.action.includes("BAN") ? "var(--rose)" : (a.action === "AUTHORIZED" ? "var(--emerald)" : "var(--cyan)");
+            return `<div class="forensic-history-item" style="border-left-color:${col}">
+              <span style="font-family:'JetBrains Mono',monospace; color:var(--text-muted);">[${esc(a.time)}]</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-weight:800; color:${col};">${esc(a.action)}</span>
+              <span style="color:#fff; flex:1; margin-left:8px;">${esc(a.detail)}</span>
+            </div>`;
+          }).join("") + `</div>`
+        : "<div style='color:var(--text-muted); padding:12px;'>No audit events recorded yet.</div>";
+      document.getElementById("modal-backdrop").classList.add("open");
+    });
+
+    document.getElementById("btn-close-modal").addEventListener("click", closeModal);
+    document.getElementById("modal-backdrop").addEventListener("click", e => {
+      if (e.target === e.currentTarget) closeModal();
+    });
+
+    document.getElementById("btn-csv").addEventListener("click", () => {
+      if (hasLiveBackend) {
+        window.location.href = "/api/export.csv";
+        return;
+      }
+      const csvEsc = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+      const headers = ["Order ID","Timestamp (Algiers)","Buyer ID","Buyer Name","Category","Item","Amount DZD","Origin","Destination","Distance KM","Elapsed Min","Velocity KMH","Fraud Probability","Decision Source","Verdict","Latency MS","Reason"].join(",") + "\n";
+      const rows = allOrders.map(o => [
+        csvEsc(o.order_id), csvEsc(fmtAlgiersTime(o.epoch_ms, o.timestamp)), csvEsc(o.buyer_id), csvEsc(o.buyer_name),
+        csvEsc(o.category), csvEsc(o.item), o.amount_dzd, csvEsc(o.origin.name), csvEsc(o.destination.name),
+        o.distance_km ?? 0, o.elapsed_min ?? 1, o.velocity_kmh, `${Math.round((o.model_score ?? 0.06) * 100)}%`, csvEsc(o.decision_source),
+        csvEsc(o.verdict), o.latency_ms ?? 24.0, csvEsc(o.reason)
+      ].join(",")).join("\n");
+      const blob = new Blob(["\ufeff" + headers + rows], { type: "text/csv;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "SentinelAI_Full_Audit_Export.csv";
+      a.click();
+    });
+
+    window.addEventListener("keydown", e => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+      const k = e.key.toLowerCase();
+      if (k === "p") document.getElementById("presenter-deck").classList.toggle("open");
+      else if (k === "f") document.getElementById("btn-fullscreen").click();
+      else if (k === "m") document.getElementById("btn-mute").click();
+      else if (e.key === "Escape") closeModal();
+    });
+
+    window.addEventListener("resize", () => {
+      const tourLayer = document.getElementById("tour-layer");
+      if (tourLayer && tourLayer.classList.contains("active") && currentStep < tourSteps.length) {
+        positionTourStep(currentStep);
+      }
+    });
+  </script>
+</body>
+</html>
